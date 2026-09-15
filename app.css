@@ -26,3 +26,5 @@ body{direction:rtl}
 .offline-item .offline-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .offline-item .offline-name{font-size:14px;font-weight:700}
 .offline-item .offline-pages{font-size:12px;color:var(--muted);margin-top:2px}
+
+.offline-box .offline-row{margin-top:8px}.offline-box .download-btn{white-space:nowrap}

@@ -27,8 +27,16 @@
   </section>
 
   <section class="offline-box">
-    <div class="offline-heading"><b>العمل دون إنترنت</b><br><span>نزّل بيانات السورة وخطوط صفحاتها مرة واحدة.</span></div>
-    <div id="offlineList" class="offline-list"></div>
+    <div class="offline-heading">
+      <b>المصحف كاملا دون إنترنت</b><br>
+      <span>نزّل بيانات الصفحات الـ604 وخطوط QCF مرة واحدة. السور التي تفتحها تُخزَّن تلقائيا أيضا.</span>
+    </div>
+    <div class="offline-row">
+      <div class="offline-text"><span id="storageHint">يتطلب مساحة تخزين كبيرة نسبيا.</span></div>
+      <button id="offlineAllBtn" class="download-btn">تنزيل الكل</button>
+    </div>
+    <div id="offlineAllProgress" class="progress"><span></span></div>
+    <div id="offlineAllStatus" class="status"></div>
   </section>
 
   <div class="toolbar"><input id="search" class="search" type="search" placeholder="ابحث عن سورة" autocomplete="off"></div>

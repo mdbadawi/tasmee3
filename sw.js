@@ -1,21 +1,9 @@
-const VERSION='quran-memorizer-pwa-v2';
-const SHELL=VERSION+'-shell';
-const RUNTIME=VERSION+'-runtime';
+const VERSION='quran-memorizer-pwa-v3';
+const SHELL=VERSION+'-shell',RUNTIME=VERSION+'-runtime';
 const APP_SHELL=['./','./index.html','./reader.html','./app.css','./home.js','./surahs.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(SHELL).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting()));});
-self.addEventListener('activate',e=>{e.waitUntil((async()=>{for(const k of await caches.keys()) if(![SHELL,RUNTIME].includes(k)) await caches.delete(k); await self.clients.claim();})());});
-function isQuranResource(url){return url.hostname==='api.quran.com'||url.hostname==='verses.quran.foundation';}
-self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET') return;
-  const url=new URL(e.request.url);
-  if(isQuranResource(url)){
-    e.respondWith((async()=>{const cache=await caches.open(RUNTIME);const hit=await cache.match(e.request);if(hit)return hit;const res=await fetch(e.request);if(res && (res.ok||res.type==='opaque')) cache.put(e.request,res.clone());return res;})()); return;
-  }
-  if(url.origin===self.location.origin){
-    e.respondWith((async()=>{const hit=await caches.match(e.request,{ignoreSearch:e.request.mode==='navigate'});if(hit)return hit;try{const res=await fetch(e.request);const cache=await caches.open(SHELL);if(res.ok)cache.put(e.request,res.clone());return res;}catch(err){if(e.request.mode==='navigate')return (await caches.match('./index.html'));throw err;}})());
-  }
-});
-self.addEventListener('message',e=>{
-  const d=e.data||{}; if(d.type!=='CACHE_URLS'||!Array.isArray(d.urls)) return;
-  e.waitUntil((async()=>{const cache=await caches.open(RUNTIME);let done=0;let hadError=false;for(const u of d.urls){try{const req=new Request(u,{mode:'cors'});let res=await cache.match(req);if(!res){res=await fetch(req);if(res&&(res.ok||res.type==='opaque'))await cache.put(req,res.clone());else throw new Error('bad response');}}catch(err){hadError=true;}done++;e.source?.postMessage({type:'CACHE_PROGRESS',id:d.id,done,total:d.urls.length});}e.source?.postMessage({type:hadError?'CACHE_ERROR':'CACHE_DONE',id:d.id,done,total:d.urls.length});})());
-});
+self.addEventListener('install',e=>e.waitUntil(caches.open(SHELL).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil((async()=>{for(const k of await caches.keys())if(![SHELL,RUNTIME].includes(k))await caches.delete(k);await self.clients.claim();})()));
+function isQuranResource(u){return u.hostname==='api.quran.com'||u.hostname==='verses.quran.foundation';}
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(isQuranResource(u)){e.respondWith((async()=>{const c=await caches.open(RUNTIME),h=await c.match(e.request);if(h)return h;const r=await fetch(e.request);if(r&&(r.ok||r.type==='opaque'))await c.put(e.request,r.clone());return r;})());return;}if(u.origin===self.location.origin){e.respondWith((async()=>{const h=await caches.match(e.request,{ignoreSearch:e.request.mode==='navigate'});if(h)return h;try{const r=await fetch(e.request),c=await caches.open(SHELL);if(r.ok)await c.put(e.request,r.clone());return r;}catch(err){if(e.request.mode==='navigate')return await caches.match('./index.html');throw err;}})());}});
+async function cacheOne(c,u){const req=new Request(u,{mode:'cors'}),h=await c.match(req);if(h)return;const r=await fetch(req);if(!r||!(r.ok||r.type==='opaque'))throw new Error('bad response');await c.put(req,r.clone());}
+self.addEventListener('message',e=>{const d=e.data||{};if(d.type!=='CACHE_URLS'||!Array.isArray(d.urls))return;e.waitUntil((async()=>{const c=await caches.open(RUNTIME);let done=0,hadError=false,next=0;const total=d.urls.length,concurrency=4;async function worker(){while(true){const i=next++;if(i>=total)return;try{await cacheOne(c,d.urls[i]);}catch(err){hadError=true;}done++;e.source?.postMessage({type:'CACHE_PROGRESS',id:d.id,done,total});}}await Promise.all(Array.from({length:concurrency},worker));e.source?.postMessage({type:hadError?'CACHE_ERROR':'CACHE_DONE',id:d.id,done,total});})());});

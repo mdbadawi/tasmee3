@@ -32,6 +32,17 @@
   ],
   "shortcuts": [
     {
+      "name": "سورة الفاتحة",
+      "short_name": "الفاتحة",
+      "url": "./reader.html?surah=1",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "سورة البقرة",
       "short_name": "البقرة",
       "url": "./reader.html?surah=2",
@@ -43,9 +54,20 @@
       ]
     },
     {
-      "name": "سورة سبأ",
-      "short_name": "سبأ",
-      "url": "./reader.html?surah=34",
+      "name": "سورة يس",
+      "short_name": "يس",
+      "url": "./reader.html?surah=36",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "سورة الملك",
+      "short_name": "الملك",
+      "url": "./reader.html?surah=67",
       "icons": [
         {
           "src": "./icons/icon-192.png",

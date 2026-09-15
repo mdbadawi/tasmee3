@@ -693,19 +693,7 @@ async function fetchPage(page){
 }
 
 async function loadAllPages(){
-  const cached = localStorage.getItem(DATA_CACHE);
-
-  if(cached){
-    try{
-      const parsed = JSON.parse(cached);
-      if(Array.isArray(parsed) && parsed.length === (LAST_PAGE-FIRST_PAGE+1)){
-        pageData = parsed;
-        await prepareAndRender();
-        return;
-      }
-    }catch(e){}
-  }
-
+  /* Cache Storage في الـService Worker هو مخزن بيانات الصفحات والخطوط. */
   const result = [];
   const batchSize = 4;
 
@@ -721,8 +709,6 @@ async function loadAllPages(){
   }
 
   pageData = result.sort((a,b)=>a.page-b.page);
-  localStorage.setItem(DATA_CACHE,JSON.stringify(pageData));
-
   await prepareAndRender();
 }
 
@@ -830,7 +816,7 @@ function renderPages(){
       head.textContent=`سُورَةُ ${SURAH.name}`;
       page.appendChild(head);
 
-      if(SURAH.number!==9){
+      if(SURAH.number!==1 && SURAH.number!==9){
         const basmala = document.createElement("div");
         basmala.className="basmala";
         basmala.textContent="بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
