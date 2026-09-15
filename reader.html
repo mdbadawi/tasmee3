@@ -823,7 +823,7 @@ function renderPages(){
     page.className="page" + (p.page===FIRST_PAGE ? " first-page" : "");
     page.id=`page-${p.page}`;
 
-    // رأس سورة البقرة والبسملة في الصفحة الأولى من السورة.
+    // رأس السورة والبسملة في الصفحة الأولى من السورة.
     if(p.page === FIRST_PAGE){
       const head = document.createElement("div");
       head.className="surah-head";
@@ -967,6 +967,7 @@ function showNextWord(){
       syncManualDisplayToToken(affected);
     }
   }
+  saveReaderState();
 }
 
 function hidePreviousWord(){
@@ -987,6 +988,7 @@ function hidePreviousWord(){
       syncManualDisplayToToken(affected);
     }
   }
+  saveReaderState();
 }
 
 function showNextAyah(){
@@ -1012,6 +1014,7 @@ function showNextAyah(){
       syncManualDisplayToToken(affected);
     }
   }
+  saveReaderState();
 }
 
 function hidePreviousAyah(){
@@ -1040,6 +1043,7 @@ function hidePreviousAyah(){
       syncManualDisplayToToken(affected);
     }
   }
+  saveReaderState();
 }
 
 function scrollToAyah(a){

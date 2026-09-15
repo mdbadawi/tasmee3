@@ -17,3 +17,12 @@ body{direction:rtl}
 .offline-box{margin:14px 0;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:13px}.offline-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.offline-text{font-size:13px;color:var(--muted);line-height:1.6}.progress{height:5px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:9px;display:none}.progress.show{display:block}.progress>span{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}
 .status{font-size:12px;color:var(--muted);margin-top:7px;min-height:18px}
 @media(max-width:480px){.hero h1{font-size:23px}.app-shell{padding-inline:10px}.surah-card{grid-template-columns:44px 1fr auto;padding-inline:9px}}
+
+.offline-heading{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+.offline-heading b{color:var(--ink);font-size:14px}
+.offline-list{display:grid;gap:10px}
+.offline-item{padding-top:9px;border-top:1px solid var(--line)}
+.offline-item:first-child{padding-top:0;border-top:0}
+.offline-item .offline-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.offline-item .offline-name{font-size:14px;font-weight:700}
+.offline-item .offline-pages{font-size:12px;color:var(--muted);margin-top:2px}

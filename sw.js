@@ -1,4 +1,4 @@
-const VERSION='quran-memorizer-pwa-v1';
+const VERSION='quran-memorizer-pwa-v2';
 const SHELL=VERSION+'-shell';
 const RUNTIME=VERSION+'-runtime';
 const APP_SHELL=['./','./index.html','./reader.html','./app.css','./home.js','./surahs.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png'];

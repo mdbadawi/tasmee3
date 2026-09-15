@@ -41,6 +41,17 @@
           "sizes": "192x192"
         }
       ]
+    },
+    {
+      "name": "سورة سبأ",
+      "short_name": "سبأ",
+      "url": "./reader.html?surah=34",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
