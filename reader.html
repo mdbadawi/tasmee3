@@ -1,0 +1,1892 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ece8df">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<title>مصحف الحفظ</title>
+
+<style>
+*{box-sizing:border-box}
+
+@font-face{
+  font-family:"UthmanicHafs";
+  src:url("https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2") format("woff2");
+  font-display:swap;
+}
+
+:root{
+  --paper:#fbf8ef;
+  --desk:#e9e5dc;
+  --ink:#171717;
+  --border:#cec7b8;
+  --panel:rgba(251,248,239,.97);
+  --button:#f2f2f2;
+  --button-hover:#e6e6e6;
+  --cursor-mark:#a95f00;
+  --page-width:820px;
+}
+
+body.dark{
+  --paper:#171717;
+  --desk:#0f0f0f;
+  --ink:#e8e3d8;
+  --border:#3a3a3a;
+  --panel:rgba(24,24,24,.97);
+  --button:#262626;
+  --button-hover:#303030;
+  --cursor-mark:#ffbf69;
+}
+
+html{scroll-behavior:smooth}
+
+html,body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar{
+  width:0;
+  height:0;
+  display:none;
+}
+
+body{
+  margin:0;
+  background:var(--desk);
+  color:var(--ink);
+  font-family:Tahoma,Arial,sans-serif;
+}
+
+#app{
+  width:100%;
+  max-width:1100px;
+  margin:18px auto 150px;
+  padding-inline:0;
+}
+
+h1{
+  margin:0 0 8px;
+  text-align:center;
+  font-size:23px;
+  font-weight:500;
+}
+
+#loading{
+  text-align:center;
+  padding:12px;
+  font-size:14px;
+  opacity:.75;
+}
+
+.page{
+  width:100%;
+  max-width:var(--page-width);
+  height:1080px;
+  margin:22px auto;
+  padding:34px 42px 42px;
+  background:var(--paper);
+  border:1px solid var(--border);
+  box-shadow:0 4px 16px rgba(0,0,0,.09);
+  position:relative;
+  overflow:hidden;
+}
+
+.surah-head{
+  height:62px;
+  border:1px solid #a9a08e;
+  border-radius:28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 30px 5px;
+  font-family:"UthmanicHafs","Traditional Arabic",serif;
+  font-size:31px;
+}
+
+.basmala{
+  height:46px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:"UthmanicHafs","Traditional Arabic",serif;
+  font-size:29px;
+  margin-bottom:3px;
+}
+
+.page-lines{
+  height:900px;
+  display:grid;
+  grid-template-rows:repeat(15, 1fr);
+  align-items:center;
+}
+
+.mushaf-line{
+  direction:rtl;
+  text-align:center;
+  white-space:nowrap;
+  min-width:0;
+  font-size:39px;
+  line-height:1;
+  height:58px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:visible;
+}
+
+.word{
+  display:inline-block;
+  flex:none;
+  cursor:default;
+}
+
+.word.hidden{
+  visibility:hidden;
+}
+
+.verse-end{
+  display:inline-block;
+  flex:none;
+  font-family:"UthmanicHafs","Traditional Arabic",serif !important;
+  font-size:.75em;
+  margin-inline:2px;
+  visibility:visible !important;
+  border-radius:50%;
+  touch-action:manipulation;
+  transition:color .12s ease, text-shadow .12s ease;
+}
+
+.verse-end.cursor-marker{
+  color:var(--cursor-mark);
+  text-shadow:0 0 0.25em var(--cursor-mark);
+}
+
+.space{
+  width:.17em;
+  flex:none;
+}
+
+.page-number{
+  position:absolute;
+  bottom:13px;
+  left:0;
+  right:0;
+  text-align:center;
+  font-size:13px;
+  opacity:.55;
+}
+
+
+.controls-wrap{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:6px;
+  z-index:9999;
+  display:flex;
+  justify-content:center;
+  padding-inline:0;
+  pointer-events:none;
+}
+
+.controls{
+  pointer-events:auto;
+  position:relative;
+  width:min(430px,100%);
+  display:grid;
+  grid-template-rows:34px 34px;
+  gap:5px;
+  padding:5px 7px;
+  border:0;
+  border-radius:12px;
+  background:transparent;
+  box-shadow:none;
+}
+
+
+.control-row{
+  width:100%;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  direction:rtl;
+}
+
+.control-row.primary-controls{
+  width:100%;
+  justify-content:space-between;
+  gap:0;
+  padding-inline:2px;
+}
+
+.mini-group{
+  height:36px;
+  display:flex;
+  align-items:center;
+  direction:ltr;
+  border:1px solid #888;
+  border-radius:8px;
+  overflow:hidden;
+  background:var(--button);
+}
+
+.mini-group button,
+.icon-btn,
+.mini-jump button{
+  border:0;
+  background:var(--button);
+  color:var(--ink);
+  height:30px;
+  min-width:34px;
+  padding:0 7px;
+  font-size:18px;
+  line-height:1;
+  cursor:pointer;
+}
+
+/* زرا الإظهار والإخفاء هما الأكثر استخداما */
+.mini-group button{
+  height:34px;
+  min-width:44px;
+  padding:0 10px;
+  font-size:20px;
+}
+
+.mini-group button + button{
+  border-left:1px solid #888;
+}
+
+.mini-symbol{
+  height:34px;
+  min-width:25px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 5px;
+  font-family:Tahoma,Arial,sans-serif;
+  font-size:14px;
+  border-left:1px solid #888;
+  border-right:1px solid #888;
+  background:var(--paper);
+  color:var(--ink);
+}
+
+.home-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;}
+
+.icon-btn{
+  border:1px solid #888;
+  border-radius:8px;
+  min-width:38px;
+}
+
+.icon-btn.on{
+  box-shadow:inset 0 0 0 2px var(--cursor-mark);
+}
+
+.mini-jump{
+  height:32px;
+  display:flex;
+  align-items:center;
+  direction:rtl;
+  border:1px solid #888;
+  border-radius:8px;
+  overflow:hidden;
+  background:var(--button);
+}
+
+.mini-jump .jump-icon{
+  width:27px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+}
+
+.mini-jump input{
+  width:47px;
+  height:30px;
+  border:0;
+  border-inline:1px solid #888;
+  outline:0;
+  text-align:center;
+  font-size:14px;
+  background:var(--paper);
+  color:var(--ink);
+  padding:0;
+  -moz-appearance:textfield;
+}
+
+.mini-jump input::-webkit-outer-spin-button,
+.mini-jump input::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+
+.mini-jump button{
+  min-width:31px;
+  padding:0 5px;
+  font-size:16px;
+}
+
+.controls button:hover{
+  background:var(--button-hover);
+}
+
+#status{
+  display:none;
+}
+
+.error{
+  max-width:760px;
+  margin:20px auto;
+  padding:16px;
+  background:#fff;
+  border:1px solid #c8bdb0;
+  line-height:1.7;
+}
+
+@media(max-width:700px){
+  .page{
+    width:100%;
+    max-width:100%;
+    height:auto;
+    min-height:760px;
+    padding:20px 0 34px;
+    border-left:0;
+    border-right:0;
+  }
+
+  .surah-head{
+    height:48px;
+    margin:0 20px 3px;
+    font-size:25px;
+  }
+
+  .basmala{
+    height:38px;
+    font-size:24px;
+  }
+
+  .page-lines{
+    height:690px;
+  }
+
+  .mushaf-line{
+    height:44px;
+    font-size:clamp(21px,5.7vw,29px);
+  }
+
+  .controls{
+    width:min(390px,100%);
+    gap:4px;
+    padding:4px 5px;
+    background:transparent;
+    border:0;
+    box-shadow:none;
+  }
+
+  #app{
+    margin-bottom:120px;
+  }
+}
+
+.controls-wrap{
+  transition:top .16s ease, bottom .16s ease;
+}
+
+.controls-wrap.at-bottom{
+  top:auto !important;
+  bottom:8px !important;
+}
+
+.controls-wrap.at-top{
+  top:8px !important;
+  bottom:auto !important;
+}
+
+
+/* =========================================================
+   وضع قلب الصفحات اليدوي: يعمل فقط عندما Auto-scroll = OFF
+   ========================================================= */
+body.page-turn-mode{
+  overflow:hidden !important;
+  overscroll-behavior:none;
+}
+
+body.page-turn-mode #app{
+  height:100dvh;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  position:relative;
+}
+
+body.page-turn-mode #pages{
+  position:fixed;
+  inset:0;
+  overflow:hidden;
+  touch-action:none;
+  background:var(--desk);
+}
+
+body.page-turn-mode .page{
+  position:absolute !important;
+  top:0;
+  left:50%;
+  width:min(var(--page-width),100%);
+  height:100dvh !important;
+  min-height:0 !important;
+  margin:0 !important;
+  transform:translateX(-50%) translateY(0);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  overflow:hidden;
+  transition:transform .18s ease, opacity .18s ease;
+}
+
+body.page-turn-mode .page.active{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+  z-index:2;
+}
+
+body.page-turn-mode .page.transitioning{
+  visibility:visible;
+  z-index:3;
+}
+
+body.page-turn-mode .page.enter-from-bottom{
+  opacity:0;
+  transform:translateX(-50%) translateY(7%);
+}
+
+body.page-turn-mode .page.enter-from-top{
+  opacity:0;
+  transform:translateX(-50%) translateY(-7%);
+}
+
+body.page-turn-mode .page.exit-to-top{
+  opacity:0;
+  transform:translateX(-50%) translateY(-7%);
+}
+
+body.page-turn-mode .page.exit-to-bottom{
+  opacity:0;
+  transform:translateX(-50%) translateY(7%);
+}
+
+/* في وضع القلب يجب أن تتسع الـ15 سطرا للنافذة */
+body.page-turn-mode .page-lines{
+  height:calc(100% - 56px) !important;
+}
+
+body.page-turn-mode .page.first-page .page-lines{
+  height:calc(100% - 166px) !important;
+}
+
+@media(max-width:700px){
+  body.page-turn-mode .page{
+    width:100%;
+    max-width:100%;
+    height:100dvh !important;
+    padding:18px 0 28px !important;
+    border-left:0;
+    border-right:0;
+  }
+
+  body.page-turn-mode .page-lines{
+    height:calc(100% - 46px) !important;
+  }
+
+  body.page-turn-mode .page.first-page .page-lines{
+    height:calc(100% - 130px) !important;
+  }
+}
+
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <h1 id="readerHeading">مصحف الحفظ</h1>
+  <div id="loading">جار تحميل بيانات الصفحات والخطوط…</div>
+
+  <div id="pages"></div>
+
+  <div class="controls-wrap" id="controlsWrap">
+    <div class="controls">
+<div class="control-row primary-controls">
+        <div class="mini-group" title="الكلمات">
+          <button id="hideWord" title="إخفاء كلمة" aria-label="إخفاء كلمة">▶</button>
+          <span class="mini-symbol" aria-hidden="true">ك</span>
+          <button id="showWord" title="إظهار كلمة" aria-label="إظهار كلمة">◀</button>
+        </div>
+
+        <div class="mini-group" title="الآيات">
+          <button id="hideAyah" title="إخفاء آية" aria-label="إخفاء آية">▶</button>
+          <span class="mini-symbol" aria-hidden="true">۝</span>
+          <button id="showAyah" title="إظهار آية" aria-label="إظهار آية">◀</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <a class="icon-btn home-link" href="./index.html" title="قائمة السور" aria-label="قائمة السور">⌂</a>
+        <button id="autoScrollToggle" class="icon-btn on" title="التمرير التلقائي مفعّل" aria-label="التمرير التلقائي" aria-pressed="true">⇵</button>
+        <button id="themeToggle" class="icon-btn" title="الوضع النهاري" aria-label="الوضع الليلي والنهاري" aria-pressed="false">☀</button>
+<div class="mini-jump" title="رقم الآية">
+          <span class="jump-icon" aria-hidden="true">۝</span>
+          <input id="ayahInput" type="number" min="1" max="286" value="1" aria-label="رقم الآية">
+          <button id="ayahJump" title="انتقال إلى الآية" aria-label="انتقال إلى الآية">↵</button>
+        </div>
+
+        <div class="mini-jump" title="التنقل بين الصفحات">
+          <button id="pagePrev" title="الصفحة السابقة" aria-label="الصفحة السابقة">▶</button>
+          <span class="jump-icon" aria-hidden="true">▤</span>
+          <input id="pageInput" type="number" min="2" max="49" value="2" aria-label="رقم الصفحة">
+          <button id="pageJump" title="انتقال إلى الصفحة" aria-label="انتقال إلى الصفحة">↵</button>
+          <button id="pageNext" title="الصفحة التالية" aria-label="الصفحة التالية">◀</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<script src="./surahs.js"></script>
+<script>
+const params=new URLSearchParams(location.search);
+const SURAH=getSurahConfig(params.get("surah")||2);
+if(!SURAH || !SURAH.enabled){ location.replace("./index.html"); throw new Error("Surah unavailable"); }
+document.title=`${SURAH.name} — مصحف الحفظ`;
+document.getElementById("readerHeading").textContent=`سورة ${SURAH.name} — مصحف المدينة`;
+const FIRST_PAGE = SURAH.firstPage;
+const LAST_PAGE = SURAH.lastPage;
+const DATA_CACHE = `qcf_v2_surah_${SURAH.number}_${FIRST_PAGE}_${LAST_PAGE}_${SURAH.cacheVersion||"v1"}`;
+const STATE_KEY = `quran_reader_state_${SURAH.number}_v1`;
+
+const API_BASE = "https://api.quran.com/api/v4";
+const FONT_BASE = "https://verses.quran.foundation/fonts/quran/hafs/v2/woff2";
+
+let pageData = [];
+let hideable = [];
+let visibleCount = 0;
+let ayahStarts = Array(SURAH.ayahCount+1).fill(undefined);
+let ayahEnds = Array(SURAH.ayahCount+1).fill(undefined);
+let loadedFonts = new Set();
+let autoScroll = true;
+let darkMode = localStorage.getItem("mushaf_theme") === "dark";
+
+let pageStarts = {};
+let pageFirstAyah = {};
+let currentNavPage = FIRST_PAGE;
+
+/* الفاصل الملوّن الذي يمثّل موضع المؤشر */
+let cursorVerse = null;
+
+/* مزامنة السكرول اليدوي */
+let touchScrolling = false;
+let scrollSyncTimer = null;
+let touchStartPage = FIRST_PAGE;
+let navScrollRaf = 0;
+
+/* كشف النقر المزدوج على فاصل الآية */
+let lastVerseTap = { verse:null, time:0 };
+
+/* وضع قلب الصفحات عند إيقاف Auto-scroll */
+let activePage = FIRST_PAGE;
+let pageTurning = false;
+let cursorTokenIndex = 0;
+let pendingTurnRequest = null;
+let swipeStartY = 0;
+let swipeStartX = 0;
+let swipeTracking = false;
+
+
+/*
+  Override يدوي لموضع الشريط في الصفحة الحالية فقط.
+  null = الوضع التلقائي.
+*/
+let controlsManualPosition = null;   // "top" | "bottom" | null
+let controlsManualPage = null;
+
+
+function isEnd(word){
+  return word.char_type_name === "end";
+}
+
+function verseNumber(word, verse){
+  const key = word.verse_key || verse.verse_key || "";
+  const n = parseInt(String(key).split(":")[1],10);
+  return Number.isFinite(n) ? n : null;
+}
+
+async function loadPageFont(page){
+  const name = `qcf-p${page}-v2`;
+  if(loadedFonts.has(page)) return name;
+
+  const font = new FontFace(
+    name,
+    `url("${FONT_BASE}/p${page}.woff2") format("woff2")`
+  );
+
+  font.display = "block";
+  await font.load();
+  document.fonts.add(font);
+  loadedFonts.add(page);
+  return name;
+}
+
+async function fetchPage(page){
+  const url =
+    `${API_BASE}/verses/by_page/${page}` +
+    `?words=true` +
+    `&word_fields=code_v2,text_qpc_hafs,text_uthmani,line_number,page_number` +
+    `&per_page=50`;
+
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`تعذر تحميل الصفحة ${page} (${res.status})`);
+
+  const json = await res.json();
+  const verses = Array.isArray(json.verses) ? json.verses : [];
+
+  // نحتفظ فقط بعناصر السورة الحالية الموجودة فعلا في هذه الصفحة.
+  const tokens = [];
+
+  verses.forEach(verse => {
+    if(verse.chapter_id !== SURAH.number && !String(verse.verse_key || "").startsWith(`${SURAH.number}:`)){
+      return;
+    }
+
+    (verse.words || []).forEach(word => {
+      // بعض واجهات by_page تعيد الآية كاملة ولو امتدت إلى صفحة أخرى.
+      if(Number(word.page_number) !== page) return;
+
+      tokens.push({
+        page,
+        line:Number(word.line_number),
+        verse:verseNumber(word,verse),
+        position:Number(word.position || 0),
+        char_type_name:word.char_type_name || "word",
+        code_v2:word.code_v2 || "",
+        text_qpc_hafs:word.text_qpc_hafs || word.text_uthmani || "",
+        text_uthmani:word.text_uthmani || ""
+      });
+    });
+  });
+
+  return {page,tokens};
+}
+
+async function loadAllPages(){
+  const cached = localStorage.getItem(DATA_CACHE);
+
+  if(cached){
+    try{
+      const parsed = JSON.parse(cached);
+      if(Array.isArray(parsed) && parsed.length === (LAST_PAGE-FIRST_PAGE+1)){
+        pageData = parsed;
+        await prepareAndRender();
+        return;
+      }
+    }catch(e){}
+  }
+
+  const result = [];
+  const batchSize = 4;
+
+  for(let start=FIRST_PAGE; start<=LAST_PAGE; start+=batchSize){
+    const nums = [];
+    for(let p=start; p<start+batchSize && p<=LAST_PAGE; p++) nums.push(p);
+
+    document.getElementById("loading").textContent =
+      `جار تحميل الصفحات ${nums[0]}–${nums[nums.length-1]} من مصحف المدينة…`;
+
+    const batch = await Promise.all(nums.map(fetchPage));
+    result.push(...batch);
+  }
+
+  pageData = result.sort((a,b)=>a.page-b.page);
+  localStorage.setItem(DATA_CACHE,JSON.stringify(pageData));
+
+  await prepareAndRender();
+}
+
+async function prepareAndRender(){
+  document.getElementById("loading").textContent =
+    "جار تحميل خطوط QCF V2 الخاصة بالصفحات…";
+
+  // الخطوط صفحة بصفحة؛ المتصفح يخزنها تلقائيا بعد التحميل.
+  await Promise.all(
+    pageData.map(p =>
+      loadPageFont(p.page).catch(err => {
+        console.warn("Font load failed",p.page,err);
+        return null;
+      })
+    )
+  );
+
+  buildIndexes();
+  renderPages();
+
+  document.getElementById("pageInput").min=FIRST_PAGE;
+  document.getElementById("pageInput").max=LAST_PAGE;
+  document.getElementById("ayahInput").max=SURAH.ayahCount;
+
+  const saved=loadReaderState();
+  if(saved){
+    visibleCount=Math.max(0,Math.min(hideable.length,Number(saved.visibleCount)||0));
+    cursorTokenIndex=Math.max(0,Math.min(hideable.length-1,Number(saved.cursorTokenIndex)||Math.max(0,visibleCount-1)));
+    currentNavPage=Math.max(FIRST_PAGE,Math.min(LAST_PAGE,Number(saved.page)||FIRST_PAGE));
+    activePage=currentNavPage;
+    touchStartPage=currentNavPage;
+    autoScroll=saved.autoScroll!==false;
+    const token=currentBoundaryToken();
+    document.getElementById("pageInput").value=currentNavPage;
+    document.getElementById("ayahInput").value=token?.verse||pageFirstAyah[currentNavPage]||1;
+    cursorVerse=token?.verse||1;
+    updateVisibility();
+    if(autoScroll){
+      controlsToBottom();
+      requestAnimationFrame(()=>{const el=pageElement(currentNavPage); if(el) el.scrollIntoView({behavior:"auto",block:"center"});});
+    }else{
+      const btn=document.getElementById("autoScrollToggle"); btn.classList.remove("on"); btn.setAttribute("aria-pressed","false");
+      enterPageTurnMode();
+    }
+  }else{
+    currentNavPage=FIRST_PAGE; touchStartPage=FIRST_PAGE; activePage=FIRST_PAGE;
+    document.getElementById("pageInput").value=FIRST_PAGE;
+    document.getElementById("ayahInput").value=pageFirstAyah[FIRST_PAGE] || 1;
+    cursorVerse=pageFirstAyah[FIRST_PAGE] || 1;
+    cursorTokenIndex=pageStarts[FIRST_PAGE]||0;
+    updateVisibility();
+  }
+
+  document.getElementById("loading").style.display="none";
+  updateStatus();
+}
+
+function buildIndexes(){
+  hideable = [];
+  ayahStarts.fill(undefined);
+  ayahEnds.fill(undefined);
+  pageStarts = {};
+  pageFirstAyah = {};
+
+  let idx = 0;
+
+  pageData.forEach(p => {
+    p.tokens.forEach(t => {
+      if(!t.verse) return;
+
+      if(!isEnd(t)){
+        if(pageStarts[p.page] === undefined){
+          pageStarts[p.page] = idx;
+          pageFirstAyah[p.page] = t.verse;
+        }
+
+        if(ayahStarts[t.verse] === undefined){
+          ayahStarts[t.verse] = idx;
+        }
+
+        t.hideIndex = idx;
+        hideable.push(t);
+        idx++;
+        ayahEnds[t.verse] = idx;
+      }else{
+        t.hideIndex = null;
+      }
+    });
+  });
+}
+
+function renderPages(){
+  const root = document.getElementById("pages");
+  root.innerHTML="";
+
+  pageData.forEach(p => {
+    const page = document.createElement("section");
+    page.className="page" + (p.page===FIRST_PAGE ? " first-page" : "");
+    page.id=`page-${p.page}`;
+
+    // رأس سورة البقرة والبسملة في الصفحة الأولى من السورة.
+    if(p.page === FIRST_PAGE){
+      const head = document.createElement("div");
+      head.className="surah-head";
+      head.textContent=`سُورَةُ ${SURAH.name}`;
+      page.appendChild(head);
+
+      if(SURAH.number!==9){
+        const basmala = document.createElement("div");
+        basmala.className="basmala";
+        basmala.textContent="بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
+        page.appendChild(basmala);
+      }
+    }
+
+    const linesBox = document.createElement("div");
+    linesBox.className="page-lines";
+
+    const byLine = new Map();
+    for(let i=1;i<=15;i++) byLine.set(i,[]);
+
+    p.tokens.forEach(t => {
+      if(t.line >=1 && t.line <=15){
+        byLine.get(t.line).push(t);
+      }
+    });
+
+    for(let lineNo=1; lineNo<=15; lineNo++){
+      const line = document.createElement("div");
+      line.className="mushaf-line";
+      line.dataset.line=lineNo;
+      line.style.fontFamily=`qcf-p${p.page}-v2`;
+
+      const tokens = byLine.get(lineNo);
+
+      tokens.forEach((t,i) => {
+        const span = document.createElement("span");
+
+        if(isEnd(t)){
+          span.className="verse-end";
+          // توصي وثائق QCF بعرض فاصل الآية بخط Unicode.
+          span.textContent=t.text_qpc_hafs || `﴿${t.verse || ""}﴾`;
+          span.id=t.verse ? `ayah-${t.verse}` : "";
+          span.dataset.verse=t.verse || "";
+
+          if(t.verse){
+            span.addEventListener("pointerup",()=>{
+              const now=Date.now();
+
+              if(lastVerseTap.verse===t.verse && now-lastVerseTap.time<=420){
+                moveCursorToVerseSeparator(t.verse);
+                lastVerseTap={verse:null,time:0};
+              }else{
+                lastVerseTap={verse:t.verse,time:now};
+              }
+            });
+          }
+        }else{
+          span.className="word";
+          span.dataset.hideIndex=t.hideIndex;
+
+          if(t.hideIndex >= visibleCount){
+            span.classList.add("hidden");
+          }
+
+          if(t.code_v2){
+            // QCF glyph codes يجب أن تُعرض مع خط الصفحة الخاص بها.
+            span.innerHTML=t.code_v2;
+          }else{
+            span.style.fontFamily="UthmanicHafs,serif";
+            span.textContent=t.text_qpc_hafs || t.text_uthmani;
+          }
+        }
+
+        line.appendChild(span);
+
+        if(i < tokens.length-1){
+          const space=document.createElement("span");
+          space.className="space";
+          line.appendChild(space);
+        }
+      });
+
+      linesBox.appendChild(line);
+    }
+
+    page.appendChild(linesBox);
+
+    const number=document.createElement("div");
+    number.className="page-number";
+    number.textContent=`صفحة ${p.page}`;
+    page.appendChild(number);
+
+    root.appendChild(page);
+  });
+}
+
+function updateVisibility(){
+  document.querySelectorAll(".word").forEach(el => {
+    const idx=Number(el.dataset.hideIndex);
+    el.classList.toggle("hidden",idx >= visibleCount);
+  });
+
+  document.querySelectorAll(".verse-end").forEach(el => {
+    el.classList.toggle(
+      "cursor-marker",
+      cursorVerse !== null && Number(el.dataset.verse) === cursorVerse
+    );
+  });
+
+  updateStatus();
+}
+
+function boundaryVerse(){
+  if(!hideable.length) return 1;
+  if(visibleCount >= hideable.length) return hideable[hideable.length-1].verse;
+  return hideable[Math.max(0,visibleCount)].verse;
+}
+
+function syncAyahFieldToBoundary(){
+  const a=boundaryVerse();
+  if(a){
+    document.getElementById("ayahInput").value=a;
+    cursorVerse=a;
+  }
+}
+
+function showNextWord(){
+  if(visibleCount < hideable.length){
+    const affectedIndex=visibleCount;
+    const affected=hideable[affectedIndex];
+
+    visibleCount++;
+    setCursorToken(affectedIndex);
+    updateVisibility();
+
+    if(autoScroll){
+      controlsToBottom();
+      ensureBoundaryVisible();
+      syncPageFieldFromViewport();
+    }else{
+      syncManualDisplayToToken(affected);
+    }
+  }
+}
+
+function hidePreviousWord(){
+  if(visibleCount > 0){
+    visibleCount--;
+
+    const affectedIndex=visibleCount;
+    const affected=hideable[affectedIndex];
+
+    setCursorToken(affectedIndex);
+    updateVisibility();
+
+    if(autoScroll){
+      controlsToBottom();
+      ensureBoundaryVisible();
+      syncPageFieldFromViewport();
+    }else{
+      syncManualDisplayToToken(affected);
+    }
+  }
+}
+
+function showNextAyah(){
+  if(visibleCount >= hideable.length) return;
+
+  const first=hideable[visibleCount];
+  const a=first.verse;
+
+  if(a && ayahEnds[a] !== undefined){
+    visibleCount=ayahEnds[a];
+
+    const affectedIndex=Math.max(0,visibleCount-1);
+    const affected=hideable[affectedIndex];
+
+    setCursorToken(affectedIndex);
+    updateVisibility();
+
+    if(autoScroll){
+      controlsToBottom();
+      scrollToAyah(a);
+      syncPageFieldFromViewport();
+    }else{
+      syncManualDisplayToToken(affected);
+    }
+  }
+}
+
+function hidePreviousAyah(){
+  if(visibleCount <= 0) return;
+
+  const prev=hideable[visibleCount-1];
+  const a=prev.verse;
+
+  if(a && ayahStarts[a] !== undefined){
+    visibleCount=ayahStarts[a];
+
+    const affectedIndex=Math.min(
+      hideable.length-1,
+      ayahStarts[a]
+    );
+    const affected=hideable[affectedIndex];
+
+    setCursorToken(affectedIndex);
+    updateVisibility();
+
+    if(autoScroll){
+      controlsToBottom();
+      scrollToAyah(a);
+      syncPageFieldFromViewport();
+    }else{
+      syncManualDisplayToToken(affected);
+    }
+  }
+}
+
+function scrollToAyah(a){
+  const el=document.getElementById(`ayah-${a}`);
+  if(el){
+    el.scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
+
+  const token=hideable.find(x=>x.verse===a);
+  if(token) scrollToPage(token.page);
+}
+
+function scrollToPage(p){
+  const el=document.getElementById(`page-${p}`);
+  if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+function ensureBoundaryVisible(){
+  if(visibleCount >= hideable.length){
+    scrollToPage(LAST_PAGE);
+    return;
+  }
+
+  const token=hideable[visibleCount];
+  const page=document.getElementById(`page-${token.page}`);
+  if(!page) return;
+
+  const r=page.getBoundingClientRect();
+  if(r.bottom < 120 || r.top > window.innerHeight-120){
+    page.scrollIntoView({behavior:"smooth",block:"center"});
+  }
+}
+
+/* نقل المؤشر إلى فاصل آية بعينه بالنقر المزدوج */
+function moveCursorToVerseSeparator(verse){
+  if(!verse || ayahEnds[verse] === undefined) return;
+
+  visibleCount=ayahEnds[verse];
+
+  const affectedIndex=Math.max(0,visibleCount-1);
+  const affected=hideable[affectedIndex];
+
+  setCursorToken(affectedIndex);
+  updateVisibility();
+
+  if(autoScroll){
+    const el=document.getElementById(`ayah-${verse}`);
+    if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+  }else{
+    syncManualDisplayToToken(affected);
+  }
+}
+
+/* الصفحة الأقرب إلى مركز الشاشة أثناء السكرول اليدوي */
+function getViewportPage(){
+  const pages=[...document.querySelectorAll(".page")];
+  if(!pages.length) return null;
+
+  const center=window.innerHeight/2;
+  let best=null;
+  let bestDist=Infinity;
+
+  for(const page of pages){
+    const r=page.getBoundingClientRect();
+
+    /* نفضّل الصفحة التي يحتوي جسمها مركز الشاشة */
+    let dist=0;
+    if(center < r.top) dist=r.top-center;
+    else if(center > r.bottom) dist=center-r.bottom;
+
+    if(dist < bestDist){
+      bestDist=dist;
+      best=page;
+    }
+  }
+
+  return best ? Number(best.id.replace("page-","")) : null;
+}
+
+/*
+  عند السكرول باللمس إلى صفحة جديدة:
+  - نحدّث خانة الصفحة.
+  - نضع رقم أول آية موجودة في الصفحة.
+  - ننقل حد الإظهار إلى أول كلمة في الصفحة.
+*/
+function updateDisplayedPageFromViewport(){
+  const p=getViewportPage();
+  if(!p || pageStarts[p] === undefined) return null;
+
+  currentNavPage=p;
+  document.getElementById("pageInput").value=p;
+  return p;
+}
+
+function rebaseCursorToPage(p){
+  if(!p || pageStarts[p] === undefined) return;
+
+  currentNavPage=p;
+  document.getElementById("pageInput").value=p;
+
+  visibleCount=pageStarts[p];
+  cursorTokenIndex=pageStarts[p];
+
+  const firstAyah=pageFirstAyah[p] || 1;
+  document.getElementById("ayahInput").value=firstAyah;
+  cursorVerse=firstAyah;
+
+  controlsLastPage=p;
+  controlsPageEnteredAt=performance.now();
+  controlsToBottom();
+
+  updateVisibility();
+}
+
+/*
+  السكرول اليدوي إلى صفحة جديدة يجعل الصفحة الجديدة هي مرجع
+  الإظهار/الإخفاء فوراً، فلا يستمر المؤشر من صفحة قديمة.
+*/
+function syncCursorToVisiblePage(){
+  const p=updateDisplayedPageFromViewport();
+  if(!p) return;
+
+  if(p !== touchStartPage){
+    rebaseCursorToPage(p);
+    touchStartPage=p;
+  }
+}
+
+function updateStatus(){
+  const box=document.getElementById("status");
+
+  if(!hideable.length){
+    box.textContent="";
+    return;
+  }
+
+  if(visibleCount===0){
+    box.textContent=`كل الكلمات مخفية — الإظهار يبدأ من أول كلمة في سورة ${SURAH.name}`;
+    return;
+  }
+
+  if(visibleCount>=hideable.length){
+    box.textContent=`سورة ${SURAH.name} كلها ظاهرة — فواصل الآيات باقية دائما`;
+    return;
+  }
+
+  const next=hideable[visibleCount];
+  const prev=hideable[visibleCount-1];
+
+  box.textContent=
+    `الإظهار التالي: الآية ${next.verse}، الصفحة ${next.page}` +
+    ` — الإخفاء التالي: الآية ${prev.verse}، الصفحة ${prev.page}`;
+}
+
+
+/* -------------------------
+   Helpers for hybrid modes
+-------------------------- */
+function currentBoundaryToken(){
+  if(!hideable.length) return null;
+
+  const idx=Math.max(
+    0,
+    Math.min(hideable.length-1, Number(cursorTokenIndex) || 0)
+  );
+
+  return hideable[idx];
+}
+
+function setCursorToken(index){
+  if(!hideable.length) return null;
+
+  cursorTokenIndex=Math.max(
+    0,
+    Math.min(hideable.length-1,index)
+  );
+
+  const token=hideable[cursorTokenIndex];
+
+  if(token){
+    document.getElementById("ayahInput").value=token.verse;
+    cursorVerse=token.verse;
+  }
+
+  return token;
+}
+
+function syncPageFieldFromViewport(){
+  const page=currentVisiblePageElement();
+  if(!page) return;
+
+  const p=Number(String(page.id).replace("page-",""));
+  if(!Number.isFinite(p)) return;
+
+  currentNavPage=p;
+  document.getElementById("pageInput").value=p;
+}
+
+function syncAyahFieldToBoundary(){
+  const token=currentBoundaryToken();
+  if(token){
+    document.getElementById("ayahInput").value=token.verse;
+    cursorVerse=token.verse;
+  }
+}
+
+
+function syncManualDisplayToToken(token){
+  if(autoScroll || !token) return;
+
+  const targetPage=Number(token.page);
+  if(!Number.isFinite(targetPage)) return;
+
+  currentNavPage=targetPage;
+  document.getElementById("pageInput").value=targetPage;
+  document.getElementById("ayahInput").value=token.verse;
+
+  if(targetPage !== activePage){
+    turnToPage(
+      targetPage,
+      targetPage > activePage ? 1 : -1,
+      false
+    );
+  }
+
+  controlsFromManualCursor();
+}
+
+function controlsFromManualCursor(){
+  /*
+    OFF فقط: الشريط يصعد عند وصول مؤشر القراءة إلى الربع الأخير.
+    ON: أسفل دائما.
+  */
+  if(autoScroll){
+    controlsToBottom();
+    return;
+  }
+
+  const token=currentBoundaryToken();
+  if(token && token.page===activePage && Number(token.line)>=12){
+    controlsToTop();
+  }else{
+    controlsToBottom();
+  }
+}
+
+/* -------------------------
+   Page-turner only when OFF
+-------------------------- */
+function pageElement(pageNo){
+  return document.getElementById(`page-${pageNo}`);
+}
+
+function activatePageInstant(pageNo){
+  document.querySelectorAll(".page").forEach(page=>{
+    page.classList.remove(
+      "active","transitioning",
+      "enter-from-bottom","enter-from-top",
+      "exit-to-top","exit-to-bottom"
+    );
+  });
+
+  const page=pageElement(pageNo);
+  if(page) page.classList.add("active");
+
+  activePage=pageNo;
+  currentNavPage=pageNo;
+  document.getElementById("pageInput").value=pageNo;
+}
+
+function resetCursorToPage(pageNo){
+  if(pageStarts[pageNo] === undefined) return;
+
+  visibleCount=pageStarts[pageNo];
+  cursorTokenIndex=pageStarts[pageNo];
+  activePage=pageNo;
+  currentNavPage=pageNo;
+
+  const firstAyah=pageFirstAyah[pageNo] || 1;
+  document.getElementById("pageInput").value=pageNo;
+  document.getElementById("ayahInput").value=firstAyah;
+
+  cursorVerse=firstAyah;
+  setCursorToken(pageStarts[pageNo]);
+  updateVisibility();
+  controlsFromManualCursor();
+}
+
+function turnToPage(pageNo,direction=1,resetCursor=true){
+  pageNo=Math.max(FIRST_PAGE,Math.min(LAST_PAGE,pageNo));
+
+  if(pageNo===activePage && !pageTurning){
+    if(resetCursor){
+      resetCursorToPage(pageNo);
+    }else{
+      document.getElementById("pageInput").value=pageNo;
+      controlsFromManualCursor();
+    }
+    return;
+  }
+
+  /*
+    لا نهمل ضغطات المستخدم أثناء حركة الصفحة.
+    نخزن آخر صفحة مطلوبة، وبعد نهاية الحركة ننفذها.
+  */
+  if(pageTurning){
+    pendingTurnRequest={pageNo,direction,resetCursor};
+    return;
+  }
+
+  const oldPage=pageElement(activePage);
+  const newPage=pageElement(pageNo);
+  if(!newPage) return;
+
+  pageTurning=true;
+
+  const enterClass=direction>0 ? "enter-from-bottom" : "enter-from-top";
+  const exitClass=direction>0 ? "exit-to-top" : "exit-to-bottom";
+
+  newPage.classList.add("transitioning",enterClass);
+
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      if(oldPage){
+        oldPage.classList.add("transitioning",exitClass);
+        oldPage.classList.remove("active");
+      }
+
+      newPage.classList.remove(enterClass);
+      newPage.classList.add("active");
+    });
+  });
+
+  setTimeout(()=>{
+    if(oldPage){
+      oldPage.classList.remove("transitioning",exitClass);
+    }
+
+    newPage.classList.remove("transitioning");
+
+    activePage=pageNo;
+    currentNavPage=pageNo;
+    document.getElementById("pageInput").value=pageNo;
+
+    if(resetCursor){
+      resetCursorToPage(pageNo);
+    }else{
+      controlsFromManualCursor();
+    }
+
+    pageTurning=false;
+
+    const pending=pendingTurnRequest;
+    pendingTurnRequest=null;
+
+    if(pending && pending.pageNo !== activePage){
+      turnToPage(
+        pending.pageNo,
+        pending.pageNo > activePage ? 1 : -1,
+        pending.resetCursor
+      );
+    }
+  },190);
+}
+
+function nextPageManual(){
+  if(activePage < LAST_PAGE){
+    turnToPage(activePage+1,1,true);
+  }
+}
+
+function previousPageManual(){
+  if(activePage > FIRST_PAGE){
+    turnToPage(activePage-1,-1,true);
+  }
+}
+
+function enterPageTurnMode(){
+  const page=currentVisiblePageElement();
+  const p=page ? Number(String(page.id).replace("page-","")) : currentNavPage;
+
+  activePage=Number.isFinite(p) ? p : FIRST_PAGE;
+  document.body.classList.add("page-turn-mode");
+  activatePageInstant(activePage);
+
+  const token=currentBoundaryToken();
+
+  if(!token || token.page !== activePage){
+    resetCursorToPage(activePage);
+  }else{
+    document.getElementById("pageInput").value=activePage;
+    document.getElementById("ayahInput").value=token.verse;
+    controlsFromManualCursor();
+  }
+}
+
+function leavePageTurnMode(){
+  document.body.classList.remove("page-turn-mode");
+
+  document.querySelectorAll(".page").forEach(page=>{
+    page.classList.remove(
+      "active","transitioning",
+      "enter-from-bottom","enter-from-top",
+      "exit-to-top","exit-to-bottom"
+    );
+  });
+
+  /*
+    نرجع للصفحة نفسها في وضع الـscroll ثم نبقي الشريط بالأسفل.
+  */
+  requestAnimationFrame(()=>{
+    const page=pageElement(activePage);
+    if(page){
+      page.scrollIntoView({behavior:"auto",block:"center"});
+    }
+    controlsToBottom();
+  });
+}
+
+
+document.getElementById("showWord").onclick=showNextWord;
+document.getElementById("hideWord").onclick=hidePreviousWord;
+document.getElementById("showAyah").onclick=showNextAyah;
+document.getElementById("hideAyah").onclick=hidePreviousAyah;
+
+document.getElementById("pageJump").onclick=()=>{
+  let n=parseInt(document.getElementById("pageInput").value,10);
+  n=Math.max(FIRST_PAGE,Math.min(LAST_PAGE,Number.isFinite(n)?n:FIRST_PAGE));
+  document.getElementById("pageInput").value=n;
+
+  if(autoScroll){
+    resetCursorToPage(n);
+    const el=pageElement(n);
+    if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+    controlsToBottom();
+  }else{
+    turnToPage(n,n>=activePage?1:-1,true);
+  }
+};
+
+
+document.getElementById("pagePrev").onclick=()=>{
+  if(autoScroll){
+    let p=parseInt(document.getElementById("pageInput").value,10);
+    if(!Number.isFinite(p)) p=currentNavPage || FIRST_PAGE;
+    p=Math.max(FIRST_PAGE,p-1);
+
+    resetCursorToPage(p);
+    const el=pageElement(p);
+    if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+    controlsToBottom();
+  }else{
+    previousPageManual();
+  }
+};
+
+document.getElementById("pageNext").onclick=()=>{
+  if(autoScroll){
+    let p=parseInt(document.getElementById("pageInput").value,10);
+    if(!Number.isFinite(p)) p=currentNavPage || FIRST_PAGE;
+    p=Math.min(LAST_PAGE,p+1);
+
+    resetCursorToPage(p);
+    const el=pageElement(p);
+    if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+    controlsToBottom();
+  }else{
+    nextPageManual();
+  }
+};
+
+document.getElementById("ayahJump").onclick=()=>{
+  let a=parseInt(document.getElementById("ayahInput").value,10);
+  a=Math.max(1,Math.min(SURAH.ayahCount,Number.isFinite(a)?a:1));
+
+  if(ayahStarts[a] === undefined) return;
+
+  const token=hideable[ayahStarts[a]];
+  if(!token) return;
+
+  visibleCount=ayahStarts[a];
+  setCursorToken(ayahStarts[a]);
+  currentNavPage=token.page;
+  document.getElementById("ayahInput").value=a;
+  document.getElementById("pageInput").value=token.page;
+  cursorVerse=a;
+  updateVisibility();
+
+  if(autoScroll){
+    scrollToAyah(a);
+    controlsToBottom();
+  }else{
+    turnToPage(token.page,token.page>=activePage?1:-1,false);
+    controlsFromManualCursor();
+  }
+};
+
+
+
+
+function saveReaderState(){
+  try{
+    const token=currentBoundaryToken();
+    localStorage.setItem(STATE_KEY,JSON.stringify({
+      page:currentNavPage||FIRST_PAGE,
+      ayah:token?.verse||1,
+      visibleCount,
+      cursorTokenIndex,
+      autoScroll,
+      updatedAt:Date.now()
+    }));
+  }catch(e){}
+}
+function loadReaderState(){
+  try{return JSON.parse(localStorage.getItem(STATE_KEY)||'null');}catch(e){return null;}
+}
+
+function applyTheme(){
+  document.body.classList.toggle("dark", darkMode);
+  const btn=document.getElementById("themeToggle");
+  if(btn){
+    btn.textContent=darkMode ? "☾" : "☀";
+    btn.setAttribute("aria-pressed",darkMode ? "true" : "false");
+    btn.title=darkMode ? "الوضع الليلي" : "الوضع النهاري";
+  }
+  localStorage.setItem("mushaf_theme", darkMode ? "dark" : "light");
+}
+
+document.getElementById("themeToggle").onclick=()=>{
+  darkMode=!darkMode;
+  applyTheme();
+};
+
+applyTheme();
+
+
+
+document.getElementById("autoScrollToggle").onclick=()=>{
+  autoScroll=!autoScroll;
+
+  const btn=document.getElementById("autoScrollToggle");
+  btn.classList.toggle("on",autoScroll);
+  btn.setAttribute("aria-pressed",autoScroll ? "true" : "false");
+  btn.title=autoScroll ? "التمرير التلقائي مفعّل" : "التمرير التلقائي متوقف";
+
+  saveReaderState();
+
+  if(autoScroll){
+    leavePageTurnMode();
+    controlsToBottom();
+  }else{
+    enterPageTurnMode();
+  }
+};
+
+
+/*
+  نزامن المؤشر مع الصفحة فقط بعد سكرول لمسي حقيقي،
+  حتى لا يعيد auto-scroll ضبط المؤشر أثناء حركاته البرمجية.
+*/
+document.addEventListener("touchstart",e=>{
+  if(!autoScroll) return;
+
+  if(e.target.closest(".page")){
+    touchScrolling=true;
+    touchStartPage=getViewportPage() || currentNavPage || FIRST_PAGE;
+  }
+},{passive:true});
+
+/*
+  في كل سكرول نحدّث رقم الصفحة المعروضة.
+  وإذا كان السكرول لمسيّاً يدوياً، نعيد مرجع المؤشر عند دخول صفحة جديدة.
+*/
+window.addEventListener("scroll",()=>{
+  if(!autoScroll) return;
+
+  if(navScrollRaf) cancelAnimationFrame(navScrollRaf);
+  navScrollRaf=requestAnimationFrame(()=>{
+    updateDisplayedPageFromViewport();
+    navScrollRaf=0;
+  });
+
+  if(touchScrolling){
+    clearTimeout(scrollSyncTimer);
+    scrollSyncTimer=setTimeout(()=>{
+      syncCursorToVisiblePage();
+    },90);
+  }
+},{passive:true});
+
+document.addEventListener("touchend",()=>{
+  if(!autoScroll || !touchScrolling) return;
+
+  clearTimeout(scrollSyncTimer);
+  scrollSyncTimer=setTimeout(()=>{
+    syncCursorToVisiblePage();
+    touchScrolling=false;
+  },100);
+},{passive:true});
+
+document.addEventListener("touchcancel",()=>{
+  touchScrolling=false;
+},{passive:true});
+
+
+
+
+/* ---------------------------------
+   سياسة موضع شريط التحكم
+   - Auto-scroll ON: أسفل الشاشة دائما.
+   - Auto-scroll OFF: أسفل الشاشة افتراضيا،
+     ويصعد مؤقتا فقط في الربع الأخير من الصفحة الحالية.
+---------------------------------- */
+
+const controlsWrapFixed = document.querySelector(".controls-wrap");
+
+function syncPositionToggle(position){
+  const btn=document.getElementById("positionToggle");
+  if(!btn) return;
+
+  const top=position==="top";
+  btn.textContent=top ? "⬆" : "⬇";
+  btn.classList.toggle("on",top);
+  btn.setAttribute("aria-pressed",top ? "true" : "false");
+  btn.title=top ? "موضع الشريط: أعلى" : "موضع الشريط: أسفل";
+}
+
+function controlsToBottom(){
+  if(!controlsWrapFixed) return;
+  controlsWrapFixed.classList.remove("at-top");
+  controlsWrapFixed.classList.add("at-bottom");
+  syncPositionToggle("bottom");
+}
+
+function controlsToTop(){
+  if(!controlsWrapFixed) return;
+  controlsWrapFixed.classList.remove("at-bottom");
+  controlsWrapFixed.classList.add("at-top");
+  syncPositionToggle("top");
+}
+
+function currentVisiblePageElement(){
+  const pages=[...document.querySelectorAll(".page")];
+  if(!pages.length) return null;
+
+  /*
+    الصفحة المرجعية للشريط هي الصفحة التي يمر أعلى الشاشة داخلها.
+    هذا يمنع الفراغ بين الصفحات وطول الشاشة من خداع الحساب.
+  */
+  const probeY = 1;
+
+  let containing = null;
+  let nearestBelow = null;
+  let nearestBelowTop = Infinity;
+
+  for(const page of pages){
+    const r=page.getBoundingClientRect();
+
+    if(r.top <= probeY && r.bottom > probeY){
+      containing = page;
+      break;
+    }
+
+    if(r.top > probeY && r.top < nearestBelowTop){
+      nearestBelowTop = r.top;
+      nearestBelow = page;
+    }
+  }
+
+  return containing || nearestBelow || pages[pages.length-1];
+}
+
+function updateControlsPositionByPage(){
+  /*
+    أهم قاعدة: مع Auto-scroll ON لا نصعد إطلاقا.
+  */
+  if(autoScroll){
+    controlsToBottom();
+    return;
+  }
+
+  const page=currentVisiblePageElement();
+  if(!page){
+    controlsToBottom();
+    return;
+  }
+
+  const pageNo=Number(String(page.id).replace("page-",""));
+
+  /*
+    بمجرد دخول صفحة جديدة:
+    - أنزل الشريط فورا.
+    - امنع الصعود لحظيا حتى تستقر الصفحة الجديدة.
+  */
+  if(pageNo !== controlsLastPage){
+    controlsLastPage=pageNo;
+    controlsPageEnteredAt=performance.now();
+
+    /* الصفحة الجديدة تعيد الوضع اليدوي إلى التلقائي. */
+    controlsManualPosition=null;
+    controlsManualPage=null;
+
+    controlsToBottom();
+    return;
+  }
+
+  /*
+    إذا اختار المستخدم موضعا يدويا في الصفحة الحالية،
+    نحترمه حتى الانتقال إلى صفحة أخرى.
+  */
+  if(controlsManualPage===pageNo && controlsManualPosition){
+    if(controlsManualPosition==="top") controlsToTop();
+    else controlsToBottom();
+    return;
+  }
+
+  /*
+    نافذة استقرار قصيرة تمنع بقايا حسابات الصفحة السابقة
+    من رفع الشريط مباشرة بعد الانتقال.
+  */
+  if(performance.now() - controlsPageEnteredAt < 80){
+    controlsToBottom();
+    return;
+  }
+
+  const r=page.getBoundingClientRect();
+  const pageHeight=Math.max(1,r.height);
+
+  /*
+    التقدم الحقيقي داخل الصفحة = الجزء الذي مر فوق أعلى الشاشة.
+    عند بداية الصفحة يكون 0، وعند مرور ثلاثة أرباعها يصبح 0.75.
+    لا نستخدم أسفل الشاشة إطلاقا لأن ذلك كان يرفع الشريط مبكرا
+    على الشاشات الطويلة.
+  */
+  const passedAboveTop=Math.max(0,-r.top);
+  const progressed=passedAboveTop / pageHeight;
+
+  if(progressed >= 0.75 && progressed < 1){
+    controlsToTop();
+  }else{
+    controlsToBottom();
+  }
+}
+
+/* الموضع الافتراضي دائما بالأسفل */
+controlsToBottom();
+
+let controlsLastPage = null;
+let controlsPageEnteredAt = 0;
+let controlsPositionRaf=0;
+window.addEventListener("scroll",()=>{
+  if(controlsPositionRaf) cancelAnimationFrame(controlsPositionRaf);
+  controlsPositionRaf=requestAnimationFrame(()=>{
+    updateControlsPositionByPage();
+    controlsPositionRaf=0;
+  });
+},{passive:true});
+
+window.addEventListener("resize",updateControlsPositionByPage);
+
+
+/* Swipe يقلب الصفحة فقط عندما Auto-scroll = OFF */
+const pagesStage=document.getElementById("pages");
+
+pagesStage.addEventListener("touchstart",e=>{
+  if(autoScroll || e.touches.length!==1) return;
+
+  swipeTracking=true;
+  swipeStartY=e.touches[0].clientY;
+  swipeStartX=e.touches[0].clientX;
+},{passive:true});
+
+pagesStage.addEventListener("touchend",e=>{
+  if(autoScroll || !swipeTracking || !e.changedTouches.length) return;
+
+  swipeTracking=false;
+
+  const endY=e.changedTouches[0].clientY;
+  const endX=e.changedTouches[0].clientX;
+
+  const dy=endY-swipeStartY;
+  const dx=endX-swipeStartX;
+
+  if(Math.abs(dy)<55 || Math.abs(dy)<Math.abs(dx)*1.15){
+    return;
+  }
+
+  if(dy<0) nextPageManual();
+  else previousPageManual();
+},{passive:true});
+
+pagesStage.addEventListener("touchcancel",()=>{
+  swipeTracking=false;
+},{passive:true});
+
+
+// Wheel: كلمة كلمة
+let wheelLock=false;
+window.addEventListener("wheel",e=>{
+  if(e.ctrlKey) return;
+  e.preventDefault();
+
+  if(wheelLock) return;
+  wheelLock=true;
+
+  if(e.deltaY>0) showNextWord();
+  else hidePreviousWord();
+
+  setTimeout(()=>wheelLock=false,80);
+},{passive:false});
+
+// لوحة المفاتيح
+document.addEventListener("keydown",e=>{
+  if(
+    document.activeElement===document.getElementById("pageInput") ||
+    document.activeElement===document.getElementById("ayahInput")
+  ) return;
+
+  if(e.key==="ArrowDown" || e.key===" "){
+    e.preventDefault();
+    showNextWord();
+  }else if(e.key==="ArrowUp"){
+    e.preventDefault();
+    hidePreviousWord();
+  }else if(e.key==="ArrowLeft"){
+    e.preventDefault();
+    showNextAyah();
+  }else if(e.key==="ArrowRight"){
+    e.preventDefault();
+    hidePreviousAyah();
+  }
+});
+
+if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});}
+
+loadAllPages().catch(err=>{
+  console.error(err);
+  document.getElementById("loading").style.display="none";
+  document.getElementById("pages").innerHTML=
+    `<div class="error">
+      <b>تعذر تحميل بيانات المصحف.</b><br>
+      يحتاج الملف إلى اتصال بالإنترنت عند أول تشغيل لتحميل بيانات الصفحات وخطوطها.
+      بعد ذلك يستفيد من ذاكرة المتصفح المؤقتة.<br><br>
+      ${String(err.message || err)}
+    </div>`;
+});
+</script>
+</body>
+</html>

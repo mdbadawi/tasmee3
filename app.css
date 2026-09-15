@@ -1,0 +1,19 @@
+*{box-sizing:border-box}
+:root{--bg:#ece8df;--card:#fbf8ef;--ink:#171717;--muted:#6c675f;--line:#d6cfc1;--accent:#8b5a22;--disabled:#b7b0a4}
+@media(prefers-color-scheme:dark){:root{--bg:#101010;--card:#191919;--ink:#eee8dd;--muted:#aaa39a;--line:#343434;--accent:#e1a25b;--disabled:#666}}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Tahoma,Arial,sans-serif}
+body{direction:rtl}
+.app-shell{width:min(760px,100%);margin:auto;padding:18px 14px 34px}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.hero h1{margin:0;font-size:26px;font-weight:700}.hero p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.install-btn,.download-btn,.resume-btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:11px;padding:10px 13px;font-size:14px;cursor:pointer}
+.install-btn[hidden]{display:none}.download-btn:disabled{opacity:.55;cursor:default}
+.resume-card{display:none;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0 16px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.resume-card.show{display:block}.resume-title{font-size:16px;font-weight:700}.resume-meta{font-size:13px;color:var(--muted);margin-top:4px}.resume-actions{margin-top:11px;display:flex;gap:8px;flex-wrap:wrap}
+.toolbar{display:flex;gap:8px;align-items:center;margin:12px 0}.search{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:11px;padding:11px 12px;font-size:15px;outline:none}
+.section-title{font-size:15px;margin:16px 2px 9px;color:var(--muted)}
+.surah-list{display:grid;gap:8px}.surah-card{width:100%;display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:10px;text-align:right;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:13px;padding:10px 12px;text-decoration:none;min-height:58px}
+.surah-card.enabled{cursor:pointer}.surah-card.disabled{opacity:.58}.surah-no{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:50%;font-size:13px}.surah-name{font-size:17px;font-weight:700}.surah-state{font-size:12px;color:var(--muted)}
+.offline-box{margin:14px 0;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:13px}.offline-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.offline-text{font-size:13px;color:var(--muted);line-height:1.6}.progress{height:5px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:9px;display:none}.progress.show{display:block}.progress>span{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}
+.status{font-size:12px;color:var(--muted);margin-top:7px;min-height:18px}
+@media(max-width:480px){.hero h1{font-size:23px}.app-shell{padding-inline:10px}.surah-card{grid-template-columns:44px 1fr auto;padding-inline:9px}}
