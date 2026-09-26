@@ -2677,15 +2677,14 @@ function recordAyahAssist(t,before){
   return ev;
 }
 function manualErrorTargetToken(){
-  const current=currentBoundaryToken();
-
   /*
-    إذا كان المؤشر نفسه على كلمة مخفية نستعملها.
-    وإلا فالخطأ اليدوي في سياق التسميع يخص الكلمة التالية المخفية،
-    لا آخر كلمة سبق إظهارها.
+    Manual Error = "قلت الكلمة الظاهرة الأخيرة خطأ".
+    لذلك لا يلمس الكلمة التالية المخفية إطلاقا.
   */
-  if(current && Number(current.hideIndex)>=Number(visibleCount)) return current;
-  return hideable[visibleCount] || current || null;
+  if(Number(visibleCount)<=0) return null;
+
+  const idx=Math.min(Number(visibleCount)-1,hideable.length-1);
+  return idx>=0 ? (hideable[idx]||null) : null;
 }
 function flashWordAssistToken(t){
   if(!t) return;
@@ -2720,54 +2719,19 @@ function flashManualErrorToken(t){
 
   setTimeout(()=>el.classList.remove("manual-error-flash"),950);
 }
-function revealManualErrorToken(t,ev){
-  if(!t||!ev) return false;
-
-  const idx=Number(t.hideIndex);
-
-  // لا نكشف أي كلمات وسيطة بالخطأ؛ نكشف فقط الكلمة التالية فعلا.
-  if(idx!==Number(visibleCount)) return false;
-
-  visibleCount=idx+1;
-  setCursorToken(idx);
-  updateVisibility();
-  markWordPassed(t);
-  trackSessionToken(t);
-
-  ev.revealedByManualError=true;
-  ev.after=captureReaderPosition();
-
-  saveReaderState();
-
-  if(autoScroll){
-    controlsToBottom();
-    ensureBoundaryVisible();
-    syncPageFieldFromViewport();
-  }else{
-    syncManualDisplayToToken(t);
-  }
-
-  return true;
-}
 function recordManualError(){
   if(!recitationMode||!activeSession) return;
 
   const t=manualErrorTargetToken();
-  if(!t) return;
+  if(!t){
+    showRecitationToast("لا توجد كلمة ظاهرة لتسجيل الخطأ عليها");
+    return;
+  }
 
   const key=wordKey(t);
 
   if(hasWordIncidentThisSession(key)){
-    // لا نضاعف الحدث، لكن نظهر للمستخدم بوضوح الكلمة المقصودة.
-    const existingHidden=Number(t.hideIndex)===Number(visibleCount);
-    if(existingHidden){
-      visibleCount=Number(t.hideIndex)+1;
-      setCursorToken(Number(t.hideIndex));
-      updateVisibility();
-      markWordPassed(t);
-      trackSessionToken(t);
-      saveReaderState();
-    }
+    // لا نضاعف Word Assist + Manual Error على الكلمة نفسها.
     flashManualErrorToken(t);
     showRecitationToast("الكلمة مسجلة بالفعل؛ لم يتكرر الحدث");
     return;
@@ -2781,6 +2745,7 @@ function recordManualError(){
 
   w.score=(Number(w.score)||0)+1;
   w.totalManualErrors=(Number(w.totalManualErrors)||0)+1;
+
   if(relapse) w.relapses=(Number(w.relapses)||0)+1;
 
   w.lastAt=Date.now();
@@ -2792,17 +2757,19 @@ function recordManualError(){
 
   const ev=makeEvent("manualError",key,t,before,repeated,relapse);
   activeSession.events.push(ev);
-  trackSessionToken(t);
 
-  // الكشف الناتج عن الخطأ اليدوي ليس Word Assist.
-  revealManualErrorToken(t,ev);
+  /*
+    لا نغير visibleCount ولا نكشف أي كلمة.
+    الكلمة المستهدفة ظاهرة بالفعل؛ نكتفي بالتسجيل والتأكيد البصري.
+  */
+  trackSessionToken(t);
   flashManualErrorToken(t);
 
   saveRecitationData();
   updateWeaknessHighlights();
   updateSessionControls();
 
-  showRecitationToast(`خطأ يدوي +1 — الآية ${t.verse}`);
+  showRecitationToast(`خطأ يدوي +1 — الآية ${t.verse}، الكلمة ${t.position}`);
 }
 
 function noteCleanWordProgress(t){
@@ -2879,12 +2846,10 @@ function undoLastRecitationEvent(){
     if(Number(ev.meta?.surah)===SURAH.number){
       tokensOfAyah(ev.meta?.verse).forEach(t=>delete activeSession.passedWordKeys?.[wordKey(t)]);
     }
-  }else if(ev.kind==="manualError" && ev.revealedByManualError){
-    delete activeSession.passedWordKeys?.[ev.key];
   }
 
   const shouldRestoreReveal =
-    (ev.kind==="wordAssist" || ev.kind==="ayahAssist" || (ev.kind==="manualError"&&ev.revealedByManualError)) &&
+    (ev.kind==="wordAssist" || ev.kind==="ayahAssist") &&
     ev.after &&
     Number(ev.after.surah)===SURAH.number &&
     Number(ev.after.visibleCount)===visibleCount;
