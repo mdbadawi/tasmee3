@@ -604,66 +604,60 @@ body.page-turn-mode .page.first-page .page-lines{
 body.recitation-mode #app{margin-bottom:165px}
 
 /* علامات الضعف Layer مستقلة:
-   لا نغير color للكلمات ولا font-palette حتى لا نكسر ألوان التجويد. */
+   لا نغيّر لون حروف الكلمة ولا font-palette حتى تظل ألوان التجويد مستقلة.
+   الدرجات الثلاث متباعدة عمدا في اللون والشكل، لا في الشدة فقط. */
 body.show-weakness .word.weak-1{
-  background:rgba(235,153,31,.19);
-  box-shadow:
-    inset 0 -.105em 0 rgba(213,119,0,.64),
-    0 0 .08em rgba(213,119,0,.22);
-  border-radius:.14em;
+  background:rgba(255,220,45,.34);
+  box-shadow:inset 0 -.13em 0 rgba(218,168,0,.86),0 0 0 1px rgba(218,168,0,.34);
+  border-radius:.15em;
 }
 body.show-weakness .word.weak-2{
-  background:rgba(232,126,22,.25);
-  box-shadow:
-    inset 0 -.135em 0 rgba(205,93,0,.78),
-    0 0 .13em rgba(205,93,0,.29);
-  border-radius:.14em;
+  background:rgba(255,143,31,.34);
+  box-shadow:inset 0 -.16em 0 rgba(231,101,0,.92),0 0 0 2px rgba(231,101,0,.42),0 0 .15em rgba(231,101,0,.28);
+  border-radius:.15em;
 }
 body.show-weakness .word.weak-3{
-  background:rgba(213,73,20,.29);
-  box-shadow:
-    inset 0 -.16em 0 rgba(187,55,0,.88),
-    0 0 .20em rgba(187,55,0,.38);
-  border-radius:.14em;
+  background:rgba(239,74,74,.34);
+  box-shadow:inset 0 -.18em 0 rgba(196,30,30,.96),0 0 0 2px rgba(196,30,30,.60),0 0 .28em rgba(196,30,30,.46);
+  border-radius:.15em;
 }
 body.dark.show-weakness .word.weak-1{
-  background:rgba(255,191,105,.17);
-  box-shadow:inset 0 -.105em 0 rgba(255,181,78,.68);
+  background:rgba(255,223,71,.26);
+  box-shadow:inset 0 -.13em 0 rgba(255,199,44,.92),0 0 0 1px rgba(255,199,44,.35);
 }
 body.dark.show-weakness .word.weak-2{
-  background:rgba(255,157,72,.22);
-  box-shadow:inset 0 -.135em 0 rgba(255,143,54,.82),0 0 .12em rgba(255,143,54,.24);
+  background:rgba(255,141,45,.30);
+  box-shadow:inset 0 -.16em 0 rgba(255,119,22,.96),0 0 0 2px rgba(255,119,22,.48);
 }
 body.dark.show-weakness .word.weak-3{
-  background:rgba(255,111,64,.27);
-  box-shadow:inset 0 -.16em 0 rgba(255,99,45,.90),0 0 .20em rgba(255,99,45,.34);
+  background:rgba(255,82,82,.31);
+  box-shadow:inset 0 -.18em 0 rgba(255,66,66,.98),0 0 0 2px rgba(255,66,66,.62),0 0 .27em rgba(255,66,66,.40);
 }
 
-/* فاصل الآية يمكن تمييزه بوضوح أكبر؛
-   نستخدم خلفية/حلقة، ونترك cursor-marker قادرا على إظهار موضع القراءة بلونه الخاص. */
+/* فاصل الآية: أصفر ← برتقالي ← أحمر، مع ازدياد سماكة الحلقة. */
 body.show-weakness .verse-end.ayah-weak-1{
-  background:rgba(235,153,31,.18);
-  box-shadow:0 0 0 2px rgba(213,119,0,.54);
+  background:rgba(255,220,45,.42);
+  box-shadow:0 0 0 3px rgba(218,168,0,.72);
 }
 body.show-weakness .verse-end.ayah-weak-2{
-  background:rgba(232,126,22,.25);
-  box-shadow:0 0 0 3px rgba(205,93,0,.67),0 0 .15em rgba(205,93,0,.28);
+  background:rgba(255,143,31,.44);
+  box-shadow:0 0 0 4px rgba(231,101,0,.80),0 0 .18em rgba(231,101,0,.34);
 }
 body.show-weakness .verse-end.ayah-weak-3{
-  background:rgba(213,73,20,.30);
-  box-shadow:0 0 0 3px rgba(187,55,0,.82),0 0 .28em rgba(187,55,0,.52);
+  background:rgba(239,74,74,.45);
+  box-shadow:0 0 0 4px rgba(196,30,30,.90),0 0 .34em rgba(196,30,30,.58);
 }
 body.dark.show-weakness .verse-end.ayah-weak-1{
-  background:rgba(255,191,105,.15);
-  box-shadow:0 0 0 2px rgba(255,181,78,.58);
+  background:rgba(255,223,71,.31);
+  box-shadow:0 0 0 3px rgba(255,199,44,.74);
 }
 body.dark.show-weakness .verse-end.ayah-weak-2{
-  background:rgba(255,157,72,.21);
-  box-shadow:0 0 0 3px rgba(255,143,54,.70),0 0 .15em rgba(255,143,54,.25);
+  background:rgba(255,141,45,.34);
+  box-shadow:0 0 0 4px rgba(255,119,22,.82),0 0 .18em rgba(255,119,22,.32);
 }
 body.dark.show-weakness .verse-end.ayah-weak-3{
-  background:rgba(255,111,64,.27);
-  box-shadow:0 0 0 3px rgba(255,99,45,.84),0 0 .28em rgba(255,99,45,.46);
+  background:rgba(255,82,82,.36);
+  box-shadow:0 0 0 4px rgba(255,66,66,.90),0 0 .34em rgba(255,66,66,.56);
 }
 
 /* تأكيد لحظي مستقل عن خيار إظهار علامات الضعف */
@@ -673,12 +667,12 @@ body.dark.show-weakness .verse-end.ayah-weak-3{
 }
 @keyframes wordAssistFlash{
   0%{
-    background:rgba(255,171,38,.46);
-    box-shadow:0 0 0 .11em rgba(231,123,0,.72),0 0 .34em rgba(231,123,0,.48);
+    background:rgba(255,225,35,.62);
+    box-shadow:0 0 0 .14em rgba(255,149,0,.92),0 0 .44em rgba(255,92,0,.62);
   }
   45%{
-    background:rgba(255,171,38,.30);
-    box-shadow:0 0 0 .08em rgba(231,123,0,.48),0 0 .20em rgba(231,123,0,.28);
+    background:rgba(255,166,35,.42);
+    box-shadow:0 0 0 .10em rgba(255,111,0,.66),0 0 .27em rgba(255,92,0,.38);
   }
   100%{
     background:transparent;
@@ -690,12 +684,12 @@ body.dark.show-weakness .verse-end.ayah-weak-3{
 }
 @keyframes ayahAssistFlash{
   0%{
-    background:rgba(255,154,32,.48);
-    box-shadow:0 0 0 4px rgba(225,93,0,.78),0 0 .42em rgba(225,93,0,.62);
+    background:rgba(255,72,72,.62);
+    box-shadow:0 0 0 5px rgba(218,24,24,.92),0 0 .55em rgba(218,24,24,.72);
   }
   50%{
-    background:rgba(255,154,32,.28);
-    box-shadow:0 0 0 3px rgba(225,93,0,.48),0 0 .22em rgba(225,93,0,.36);
+    background:rgba(255,138,41,.40);
+    box-shadow:0 0 0 4px rgba(238,81,0,.68),0 0 .30em rgba(238,81,0,.44);
   }
   100%{
     background:transparent;
@@ -910,6 +904,12 @@ body.page-turn-mode.recitation-mode .page.first-page .page-lines{height:calc(100
   .recitation-action{font-size:10px;padding:0 4px}
 }
 
+
+.recitation-confirm-card{width:min(390px,100%);text-align:right}
+.recitation-confirm-card p{margin:4px 0 0;font-size:13px;line-height:1.8;opacity:.85}
+.modal-actions .confirm-danger{background:#9f2727;color:#fff;border-color:#9f2727}
+body.dark .modal-actions .confirm-danger{background:#b63a3a;border-color:#b63a3a}
+
 </style>
 </head>
 
@@ -982,6 +982,17 @@ body.page-turn-mode.recitation-mode .page.first-page .page-lines{height:calc(100
       <div class="modal-actions">
         <button id="summaryClose" type="button">إغلاق</button>
         <button id="summaryStats" type="button">الإحصاءات</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="recitationConfirmOverlay" class="recitation-overlay" hidden>
+    <div class="recitation-card recitation-confirm-card" role="dialog" aria-modal="true" aria-labelledby="recitationConfirmTitle">
+      <h2 id="recitationConfirmTitle">إنهاء جلسة التسميع؟</h2>
+      <p id="recitationConfirmText">سيتم حفظ الجلسة الحالية وإحصاءاتها ثم إنهاؤها.</p>
+      <div class="modal-actions">
+        <button id="recitationConfirmCancel" type="button">إلغاء</button>
+        <button id="recitationConfirmOk" class="confirm-danger" type="button">إنهاء الجلسة</button>
       </div>
     </div>
   </div>
@@ -1973,10 +1984,33 @@ document.getElementById("hideWord").onclick=hidePreviousWord;
 document.getElementById("showAyah").onclick=showNextAyah;
 document.getElementById("hideAyah").onclick=hidePreviousAyah;
 
+function navigatePageWithoutRevealReset(pageNo){
+  pageNo=Math.max(FIRST_PAGE,Math.min(LAST_PAGE,Number(pageNo)||FIRST_PAGE));
+
+  currentNavPage=pageNo;
+  document.getElementById("pageInput").value=pageNo;
+
+  // في التسميع: زر الصفحة يغيّر الصفحة المعروضة فقط، ولا يغيّر موضع التسميع أو حالة الكشف.
+  if(autoScroll){
+    const el=pageElement(pageNo);
+    if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+    controlsToBottom();
+  }else{
+    turnToPage(pageNo,pageNo>=activePage?1:-1,false);
+  }
+
+  saveReaderState();
+}
+
 document.getElementById("pageJump").onclick=()=>{
   let n=parseInt(document.getElementById("pageInput").value,10);
   n=Math.max(FIRST_PAGE,Math.min(LAST_PAGE,Number.isFinite(n)?n:FIRST_PAGE));
   document.getElementById("pageInput").value=n;
+
+  if(recitationMode && activeSession){
+    navigatePageWithoutRevealReset(n);
+    return;
+  }
 
   if(autoScroll){
     resetCursorToPage(n);
@@ -1990,11 +2024,16 @@ document.getElementById("pageJump").onclick=()=>{
 
 
 document.getElementById("pagePrev").onclick=()=>{
-  if(autoScroll){
-    let p=parseInt(document.getElementById("pageInput").value,10);
-    if(!Number.isFinite(p)) p=currentNavPage || FIRST_PAGE;
-    p=Math.max(FIRST_PAGE,p-1);
+  let p=parseInt(document.getElementById("pageInput").value,10);
+  if(!Number.isFinite(p)) p=currentNavPage || FIRST_PAGE;
+  p=Math.max(FIRST_PAGE,p-1);
 
+  if(recitationMode && activeSession){
+    navigatePageWithoutRevealReset(p);
+    return;
+  }
+
+  if(autoScroll){
     resetCursorToPage(p);
     const el=pageElement(p);
     if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
@@ -2005,11 +2044,16 @@ document.getElementById("pagePrev").onclick=()=>{
 };
 
 document.getElementById("pageNext").onclick=()=>{
-  if(autoScroll){
-    let p=parseInt(document.getElementById("pageInput").value,10);
-    if(!Number.isFinite(p)) p=currentNavPage || FIRST_PAGE;
-    p=Math.min(LAST_PAGE,p+1);
+  let p=parseInt(document.getElementById("pageInput").value,10);
+  if(!Number.isFinite(p)) p=currentNavPage || FIRST_PAGE;
+  p=Math.min(LAST_PAGE,p+1);
 
+  if(recitationMode && activeSession){
+    navigatePageWithoutRevealReset(p);
+    return;
+  }
+
+  if(autoScroll){
     resetCursorToPage(p);
     const el=pageElement(p);
     if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
@@ -2806,7 +2850,8 @@ function updateKhatmah(session,summary){
 }
 function endRecitationSession(){
   if(!activeSession){
-    setRecitationMode(false);
+    recitationMode=false;
+    applyRecitationModeUI();
     return;
   }
   const session=activeSession;
@@ -2874,10 +2919,58 @@ function sessionAssistMap(session,field){
   return out;
 }
 
+let pendingRecitationExitReason=null;
+
+function closeRecitationConfirm(){
+  pendingRecitationExitReason=null;
+  const overlay=document.getElementById("recitationConfirmOverlay");
+  if(overlay) overlay.hidden=true;
+}
+
+function requestRecitationExit(reason="end"){
+  if(!activeSession){
+    recitationMode=false;
+    applyRecitationModeUI();
+    return;
+  }
+
+  pendingRecitationExitReason=reason;
+
+  const overlay=document.getElementById("recitationConfirmOverlay");
+  const title=document.getElementById("recitationConfirmTitle");
+  const text=document.getElementById("recitationConfirmText");
+  const ok=document.getElementById("recitationConfirmOk");
+
+  if(reason==="normal"){
+    if(title) title.textContent="العودة إلى الوضع العادي؟";
+    if(text) text.textContent="الرجوع إلى الوضع العادي سينهي جلسة التسميع الحالية ويحفظ إحصاءاتها أولا.";
+    if(ok) ok.textContent="إنهاء والعودة للعادي";
+  }else{
+    if(title) title.textContent="إنهاء جلسة التسميع؟";
+    if(text) text.textContent="سيتم حفظ الجلسة الحالية وإحصاءاتها ثم عرض ملخصها.";
+    if(ok) ok.textContent="إنهاء الجلسة";
+  }
+
+  if(overlay) overlay.hidden=false;
+}
+
+function confirmRecitationExit(){
+  if(!pendingRecitationExitReason) return;
+  closeRecitationConfirm();
+  endRecitationSession();
+}
+
 function setRecitationMode(on){
-  if(on){startRecitationSession();return;}
-  if(activeSession){endRecitationSession();return;}
-  recitationMode=false; applyRecitationModeUI();
+  if(on){
+    startRecitationSession();
+    return;
+  }
+  if(activeSession){
+    requestRecitationExit("normal");
+    return;
+  }
+  recitationMode=false;
+  applyRecitationModeUI();
 }
 function applyRecitationModeUI(){
   document.body.classList.toggle("recitation-mode",!!recitationMode);
@@ -3256,7 +3349,18 @@ document.getElementById("wordAssistBtn").onclick=()=>showNextWord({assist:true})
 document.getElementById("ayahAssistBtn").onclick=()=>showNextAyah({assist:true});
 document.getElementById("manualErrorBtn").onclick=recordManualError;
 document.getElementById("undoRecitationBtn").onclick=undoLastRecitationEvent;
-document.getElementById("endSessionBtn").onclick=endRecitationSession;
+document.getElementById("endSessionBtn").onclick=()=>requestRecitationExit("end");
+document.getElementById("recitationConfirmCancel").onclick=closeRecitationConfirm;
+document.getElementById("recitationConfirmOk").onclick=confirmRecitationExit;
+document.getElementById("recitationConfirmOverlay").addEventListener("click",e=>{
+  if(e.target.id==="recitationConfirmOverlay") closeRecitationConfirm();
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape" && !document.getElementById("recitationConfirmOverlay")?.hidden){
+    closeRecitationConfirm();
+  }
+});
+
 document.getElementById("statsOpen").onclick=openStats;
 document.getElementById("statsClose").onclick=closeStats;
 document.getElementById("summaryClose").onclick=closeSessionSummary;
