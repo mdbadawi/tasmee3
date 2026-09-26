@@ -1126,6 +1126,7 @@ async function fetchPage(page){
         line:Number(word.line_number),
         verse:verseNumber(word,verse),
         position:Number(word.position || 0),
+        location:String(word.location || ""),
         char_type_name:word.char_type_name || "word",
         code_v2:word.code_v2 || "",
         text_qpc_hafs:word.text_qpc_hafs || word.text_uthmani || "",
@@ -1222,12 +1223,36 @@ function buildIndexes(){
   pageFirstAyah = {};
 
   let idx = 0;
+  const verseWordCounter = {};
 
   pageData.forEach(p => {
     p.tokens.forEach(t => {
       if(!t.verse) return;
 
       if(!isEnd(t)){
+        /*
+          هوية الكلمة يجب أن تكون فريدة داخل الآية.
+          بعض الاستجابات/الكاشات القديمة قد لا تحمل position بصورة صالحة.
+          نستخدم position إن كان صحيحا، ثم location إن وجد، وإلا نشتقه
+          من ترتيب الكلمات الفعلي عبر صفحات السورة. هذا لا يغيّر العرض.
+        */
+        const verseNo=Number(t.verse)||0;
+        const previous=Number(verseWordCounter[verseNo])||0;
+
+        let pos=Number(t.position)||0;
+
+        if(!(pos>0) && t.location){
+          const locParts=String(t.location).split(":");
+          const locPos=parseInt(locParts[locParts.length-1],10);
+          if(Number.isFinite(locPos) && locPos>0) pos=locPos;
+        }
+
+        // إذا كان الرقم مفقودا أو مكررا، نضمن ترتيبا تصاعديا فريدا.
+        if(!(pos>previous)) pos=previous+1;
+
+        t.position=pos;
+        verseWordCounter[verseNo]=pos;
+
         if(pageStarts[p.page] === undefined){
           pageStarts[p.page] = idx;
           pageFirstAyah[p.page] = t.verse;
@@ -1504,7 +1529,7 @@ function showNextWord(options={}){
   if(recitationMode && activeSession && target){
     if(options.assist){
       event=recordWordAssist(target,before);
-    }else{
+    }else if(!alreadyPassedWord(target)){
       noteCleanWordProgress(target);
     }
   }
@@ -1538,7 +1563,7 @@ function showNextAyah(options={}){
   if(recitationMode && activeSession && ayah){
     if(options.assist){
       event=recordAyahAssist(first,before);
-    }else{
+    }else if(!alreadyPassedAyah(ayah)){
       noteCleanAyahProgress(ayah);
     }
   }
@@ -2110,7 +2135,7 @@ function defaultMetric(){
 }
 function defaultRecitationData(){
   return {
-    version:2,
+    version:3,
     activeSession:null,
     sessions:[],
     words:{},
@@ -2463,10 +2488,12 @@ function makeEvent(kind,key,t,before,repeated,relapse){
 function recordWordAssist(t,before){
   if(!activeSession||!t) return null;
   const key=wordKey(t);
-  if(alreadyPassedWord(t)){
-    showRecitationToast("موضع سبق المرور عليه — لم تُحسب مساعدة");
-    return null;
-  }
+
+  /*
+    زر Word Assist إشارة صريحة إلى أن المستخدم نسي هذه الكلمة.
+    لذلك يُسمح بتسجيله حتى بعد الرجوع إلى موضع سبق المرور عليه.
+    الرجوع للتأكد بلا تسجيل يتم بالسهم العادي، لا بزر المساعدة.
+  */
   if(hasWordIncidentThisSession(key)){
     showRecitationToast("الموضع مسجل بالفعل في هذه الجلسة");
     return null;
@@ -2485,17 +2512,19 @@ function recordWordAssist(t,before){
   const ev=makeEvent("wordAssist",key,t,before,repeated,relapse);
   activeSession.events.push(ev);
   saveRecitationData(); updateWeaknessHighlights(); updateSessionControls();
-  showRecitationToast("Word Assist +1");
+  showRecitationToast(`Word Assist +1 — الآية ${t.verse}، الكلمة ${t.position}`);
   return ev;
 }
 function recordAyahAssist(t,before){
   if(!activeSession||!t) return null;
   const a=t.verse;
   const key=ayahKey(a);
-  if(alreadyPassedAyah(a)){
-    showRecitationToast("آية سبق المرور عليها — لم تُحسب مساعدة");
-    return null;
-  }
+
+  /*
+    زر Ayah Assist = "نسيت هذه الآية" بصورة صريحة.
+    إذا رجع المستخدم آية للخلف ثم ضغطه يجب أن تُسجل وتُلوّن.
+    أما إظهار آية سابقة بالسهم العادي فيظل مجرد مراجعة ولا يحسب.
+  */
   if(activeSession.events.some(e=>e.kind==="ayahAssist"&&e.key===key)){
     showRecitationToast("مساعدة الآية مسجلة بالفعل");
     return null;
@@ -2514,7 +2543,7 @@ function recordAyahAssist(t,before){
   const ev=makeEvent("ayahAssist",key,t,before,repeated,relapse);
   activeSession.events.push(ev);
   saveRecitationData(); updateWeaknessHighlights(); updateSessionControls();
-  showRecitationToast("Ayah Assist +1");
+  showRecitationToast(`Ayah Assist +1 — الآية ${a}`);
   return ev;
 }
 function manualErrorTargetToken(){
@@ -2989,7 +3018,178 @@ function updateSessionControls(){
   const a=document.getElementById("ayahAssistCount"); if(a) a.textContent=c.ayahAssists;
   const m=document.getElementById("manualErrorCount"); if(m) m.textContent=c.manualErrors;
 }
+function normalizeWordTextForIdentity(s){
+  return String(s||"").replace(/\s+/g," ").trim();
+}
+
+function resolveCurrentTokenFromMeta(meta){
+  if(!meta || Number(meta.surah)!==Number(SURAH.number)) return null;
+
+  const verse=Number(meta.verse)||0;
+  if(!verse) return null;
+
+  const tokens=tokensOfAyah(verse);
+  if(!tokens.length) return null;
+
+  const pos=Number(meta.position)||0;
+  if(pos>0){
+    const byPos=tokens.find(t=>Number(t.position)===pos);
+    if(byPos) return byPos;
+  }
+
+  const wanted=normalizeWordTextForIdentity(meta.text);
+  if(wanted){
+    const matches=tokens.filter(t=>
+      normalizeWordTextForIdentity(t.text_uthmani||t.text_qpc_hafs)===wanted
+    );
+    if(matches.length===1) return matches[0];
+  }
+
+  return null;
+}
+
+function mergeWeaknessWordRecord(target,source,newKey,newMeta){
+  if(!target){
+    return {
+      ...source,
+      key:newKey,
+      meta:newMeta
+    };
+  }
+
+  const sourceLast=Number(source.lastAt)||0;
+  const targetLast=Number(target.lastAt)||0;
+
+  return {
+    ...target,
+    key:newKey,
+    meta:newMeta,
+    score:(Number(target.score)||0)+(Number(source.score)||0),
+    totalWordAssists:(Number(target.totalWordAssists)||0)+(Number(source.totalWordAssists)||0),
+    totalManualErrors:(Number(target.totalManualErrors)||0)+(Number(source.totalManualErrors)||0),
+    recoveries:(Number(target.recoveries)||0)+(Number(source.recoveries)||0),
+    relapses:(Number(target.relapses)||0)+(Number(source.relapses)||0),
+    lastAt:Math.max(targetLast,sourceLast)||null,
+    lastIncidentSessionId:
+      sourceLast>=targetLast
+        ? (source.lastIncidentSessionId||target.lastIncidentSessionId||null)
+        : (target.lastIncidentSessionId||source.lastIncidentSessionId||null),
+    lastRecoveryAt:Math.max(Number(target.lastRecoveryAt)||0,Number(source.lastRecoveryAt)||0)||null
+  };
+}
+
+function migrateLegacyWordIdentityForCurrentSurah(){
+  let changed=false;
+  const prefix=`${SURAH.number}:`;
+
+  // 1) Weakness records.
+  for(const [oldKey,record] of Object.entries({...recitationData.words})){
+    if(!oldKey.startsWith(prefix)) continue;
+
+    const token=resolveCurrentTokenFromMeta(record?.meta);
+    if(!token) continue;
+
+    const newKey=wordKey(token);
+    const newMeta=tokenMeta(token);
+
+    if(oldKey===newKey){
+      if(Number(record?.meta?.position)!==Number(newMeta.position)){
+        record.meta=newMeta;
+        changed=true;
+      }
+      continue;
+    }
+
+    recitationData.words[newKey]=mergeWeaknessWordRecord(
+      recitationData.words[newKey],
+      record,
+      newKey,
+      newMeta
+    );
+    delete recitationData.words[oldKey];
+    changed=true;
+  }
+
+  // 2) Event histories: repair key + metadata when the target word is resolvable.
+  const migrateEvent=(ev)=>{
+    if(!ev || !["wordAssist","manualError"].includes(ev.kind)) return;
+    if(Number(ev.meta?.surah)!==Number(SURAH.number)) return;
+
+    const token=resolveCurrentTokenFromMeta(ev.meta);
+    if(!token) return;
+
+    const newKey=wordKey(token);
+    if(ev.key!==newKey || Number(ev.meta?.position)!==Number(token.position)){
+      ev.key=newKey;
+      ev.meta=tokenMeta(token);
+      changed=true;
+    }
+  };
+
+  (recitationData.sessions||[]).forEach(s=>(s.events||[]).forEach(migrateEvent));
+  (activeSession?.events||[]).forEach(migrateEvent);
+
+  // 3) Clean candidates in an active session.
+  if(activeSession?.cleanWordCandidates){
+    const rebuilt={};
+    for(const meta of Object.values(activeSession.cleanWordCandidates)){
+      const token=resolveCurrentTokenFromMeta(meta);
+      if(token) rebuilt[wordKey(token)]=tokenMeta(token);
+    }
+    activeSession.cleanWordCandidates=rebuilt;
+  }
+
+  // 4) Repair the active-session starting word if an old :0 identity was stored.
+  if(activeSession?.start && Number(activeSession.start.surah)===Number(SURAH.number)){
+    const startToken=resolveCurrentTokenFromMeta(activeSession.start);
+    if(startToken){
+      const newStart=tokenMeta(startToken);
+      if(Number(activeSession.start.position)!==Number(newStart.position)){
+        activeSession.start=newStart;
+        changed=true;
+      }
+    }
+  }
+
+  // 5) Rebuild passed-word identities conservatively from what is already
+  // visibly traversed in the current session. This prevents old :0 keys from
+  // affecting "سبق المرور" logic after an update.
+  if(activeSession){
+    const rebuiltPassed={};
+    for(const key of Object.keys(activeSession.passedWordKeys||{})){
+      if(!key.startsWith(prefix) || !key.endsWith(":0")) rebuiltPassed[key]=1;
+    }
+
+    for(const ev of activeSession.events||[]){
+      if(["wordAssist","manualError"].includes(ev.kind) &&
+         Number(ev.meta?.surah)===Number(SURAH.number)){
+        const token=resolveCurrentTokenFromMeta(ev.meta);
+        if(token) rebuiltPassed[wordKey(token)]=1;
+      }
+    }
+
+    activeSession.passedWordKeys=rebuiltPassed;
+  }
+
+  // 6) Current-surah ayah snapshots are safe to rebuild from the loaded mushaf
+  // so word highlighting inside the full ayah uses the repaired positions.
+  for(const key of Object.keys(recitationData.ayahText||{})){
+    if(!key.startsWith(prefix)) continue;
+    const verse=Number(key.split(":")[1])||0;
+    const snap=verse ? buildCurrentAyahSnapshot(verse) : null;
+    if(snap){
+      recitationData.ayahText[key]=snap;
+      changed=true;
+    }
+  }
+
+  recitationData.version=3;
+  if(changed) saveRecitationData();
+  return changed;
+}
+
 function initRecitationAfterRender(){
+  migrateLegacyWordIdentityForCurrentSurah();
   document.body.classList.toggle("show-weakness",weaknessMarksEnabled);
   if(activeSession){
     activeSession.pages=activeSession.pages||{};
