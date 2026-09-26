@@ -682,6 +682,16 @@ body.dark.show-weakness .verse-end.ayah-weak-3{
 .verse-end.ayah-assist-flash{
   animation:ayahAssistFlash 1.15s ease-out;
 }
+
+/* الآيات التي احتاجت Ayah Assist في الجلسة الحالية:
+   علامة مستقلة عن show-weakness حتى يكون التسجيل واضحا فوريا. */
+.verse-end.session-ayah-assist{
+  outline:3px solid rgba(196,30,30,.74);
+  outline-offset:2px;
+}
+body.dark .verse-end.session-ayah-assist{
+  outline-color:rgba(255,82,82,.82);
+}
 @keyframes ayahAssistFlash{
   0%{
     background:rgba(255,72,72,.62);
@@ -2515,6 +2525,123 @@ function recordWordAssist(t,before){
   showRecitationToast(`Word Assist +1 — الآية ${t.verse}، الكلمة ${t.position}`);
   return ev;
 }
+function recitationAyahAssistTargetVerse(){
+  // الحالة الأهم: رجع المستخدم آية للخلف، فأصبح المؤشر عند بدايتها وهي مخفية.
+  const cursorA=Number(cursorVerse)||0;
+  if(
+    cursorA>0 &&
+    ayahStarts[cursorA]!==undefined &&
+    Number(ayahStarts[cursorA])===Number(visibleCount)
+  ){
+    return cursorA;
+  }
+
+  // الحالة العادية: الآية التالية عند حد الإظهار.
+  const next=hideable[visibleCount];
+  if(next?.verse) return Number(next.verse);
+
+  // عند نهاية السورة، نرجع للآية التي يشير إليها المؤشر.
+  const current=currentBoundaryToken();
+  return Number(current?.verse)||cursorA||0;
+}
+
+function applyCurrentSessionAyahAssistMarks(){
+  document.querySelectorAll(".verse-end").forEach(el=>{
+    el.classList.remove("session-ayah-assist");
+    if(!activeSession) return;
+
+    const verse=Number(el.dataset.verse)||0;
+    if(!verse) return;
+
+    const key=ayahKey(verse);
+    const used=activeSession.events.some(
+      e=>e.kind==="ayahAssist" && e.key===key
+    );
+
+    if(used) el.classList.add("session-ayah-assist");
+  });
+}
+
+function revealSpecificAyahForAssist(verse){
+  verse=Number(verse)||0;
+  if(!verse || ayahStarts[verse]===undefined || ayahEnds[verse]===undefined) return null;
+
+  const start=Number(ayahStarts[verse]);
+  const end=Number(ayahEnds[verse]);
+
+  /*
+    إذا كانت الآية هي الآية المخفية عند حد الإظهار، نكشفها.
+    إذا كانت ظاهرة بالفعل فلا نغير visibleCount؛ التسجيل يظل صالحا.
+  */
+  if(Number(visibleCount)===start){
+    visibleCount=end;
+  }
+
+  const lastIndex=Math.max(start,Math.min(hideable.length-1,end-1));
+  const last=hideable[lastIndex]||hideable[start]||null;
+
+  if(last){
+    setCursorToken(lastIndex);
+  }else{
+    cursorVerse=verse;
+    document.getElementById("ayahInput").value=verse;
+  }
+
+  updateVisibility();
+
+  if(autoScroll){
+    controlsToBottom();
+    scrollToAyah(verse);
+    syncPageFieldFromViewport();
+  }else if(last){
+    syncManualDisplayToToken(last);
+  }
+
+  return last;
+}
+
+function performAyahAssist(){
+  if(!recitationMode || !activeSession) return;
+
+  const verse=recitationAyahAssistTargetVerse();
+  if(!verse) return;
+
+  const first=tokensOfAyah(verse)[0] || hideable[ayahStarts[verse]];
+  if(!first) return;
+
+  const before=captureReaderPosition();
+
+  // نسجل الحدث أولا، مستقلا عن منطق "الآية التالية".
+  const event=recordAyahAssist(first,before);
+
+  // حتى لو كان الحدث مسجلا سابقا في نفس الجلسة، نظهر الموضع المقصود بوضوح.
+  revealSpecificAyahForAssist(verse);
+
+  markAyahPassed(verse);
+  tokensOfAyah(verse).forEach(markWordPassed);
+  tokensOfAyah(verse).forEach(trackSessionToken);
+
+  if(event){
+    event.after=captureReaderPosition();
+  }
+
+  saveReaderState();
+  saveRecitationData();
+
+  // نعيد تطبيق العلامة بعد كل تغييرات العرض، وليس قبلها.
+  updateWeaknessHighlights();
+  applyCurrentSessionAyahAssistMarks();
+
+  requestAnimationFrame(()=>{
+    updateWeaknessHighlights();
+    applyCurrentSessionAyahAssistMarks();
+    flashAyahAssistMarker(verse);
+  });
+
+  updateSessionControls();
+  updateControlsPositionByPage();
+}
+
 function recordAyahAssist(t,before){
   if(!activeSession||!t) return null;
   const a=t.verse;
@@ -2526,7 +2653,10 @@ function recordAyahAssist(t,before){
     أما إظهار آية سابقة بالسهم العادي فيظل مجرد مراجعة ولا يحسب.
   */
   if(activeSession.events.some(e=>e.kind==="ayahAssist"&&e.key===key)){
-    showRecitationToast("مساعدة الآية مسجلة بالفعل");
+    updateWeaknessHighlights();
+    applyCurrentSessionAyahAssistMarks();
+    requestAnimationFrame(()=>flashAyahAssistMarker(a));
+    showRecitationToast(`مساعدة الآية ${a} مسجلة بالفعل`);
     return null;
   }
   const w=ensureAyahWeakness(t);
@@ -3011,6 +3141,7 @@ function applyRecitationModeUI(){
   document.getElementById("recitationModeBtn")?.classList.toggle("active",!!recitationMode);
   updateSessionControls();
   updateControlsPositionByPage();
+  applyCurrentSessionAyahAssistMarks();
 }
 function updateSessionControls(){
   const c=sessionCounts(activeSession);
@@ -3223,6 +3354,7 @@ function updateWeaknessHighlights(){
     const score=Number(a?.score)||0;
     if(score>0) el.classList.add(score>=3?"ayah-weak-3":score===2?"ayah-weak-2":"ayah-weak-1");
   });
+  applyCurrentSessionAyahAssistMarks();
 }
 function toggleWeaknessMarks(){
   weaknessMarksEnabled=!weaknessMarksEnabled;
@@ -3546,7 +3678,7 @@ applyTheme();
 document.getElementById("normalModeBtn").onclick=()=>setRecitationMode(false);
 document.getElementById("recitationModeBtn").onclick=()=>setRecitationMode(true);
 document.getElementById("wordAssistBtn").onclick=()=>showNextWord({assist:true});
-document.getElementById("ayahAssistBtn").onclick=()=>showNextAyah({assist:true});
+document.getElementById("ayahAssistBtn").onclick=performAyahAssist;
 document.getElementById("manualErrorBtn").onclick=recordManualError;
 document.getElementById("undoRecitationBtn").onclick=undoLastRecitationEvent;
 document.getElementById("endSessionBtn").onclick=()=>requestRecitationExit("end");
