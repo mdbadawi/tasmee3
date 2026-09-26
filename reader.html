@@ -626,6 +626,100 @@ body.show-weakness .verse-end.ayah-weak-1{box-shadow:0 0 0 1px rgba(184,104,0,.3
 body.show-weakness .verse-end.ayah-weak-2{box-shadow:0 0 0 2px rgba(184,104,0,.42)}
 body.show-weakness .verse-end.ayah-weak-3{box-shadow:0 0 .22em 2px rgba(184,65,0,.52)}
 
+/* تأكيد بصري لحظي للكلمة التي سُجّل عليها خطأ يدوي.
+   لا نغيّر لون الحروف حتى تظل طبقة التجويد مستقلة. */
+.word.manual-error-flash{
+  position:relative;
+  border-radius:.14em;
+  animation:manualErrorFlash .9s ease-out;
+}
+@keyframes manualErrorFlash{
+  0%{
+    background:rgba(196,63,40,.30);
+    box-shadow:0 0 0 .10em rgba(196,63,40,.65), 0 0 .28em rgba(196,63,40,.38);
+  }
+  55%{
+    background:rgba(196,63,40,.17);
+    box-shadow:0 0 0 .07em rgba(196,63,40,.42);
+  }
+  100%{
+    background:transparent;
+    box-shadow:none;
+  }
+}
+
+.event-list{
+  display:grid;
+  gap:7px;
+  margin-top:7px;
+}
+.event-card{
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:8px 9px;
+  background:color-mix(in srgb,var(--paper) 94%,var(--button) 6%);
+}
+.event-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:8px;
+  font-size:11px;
+  line-height:1.5;
+  margin-bottom:5px;
+}
+.event-head b{font-size:12px}
+.event-meta{opacity:.72;text-align:left;white-space:nowrap}
+.event-ayah{
+  font-family:"UthmanicHafs",serif;
+  font-size:18px;
+  line-height:2;
+  text-align:right;
+  direction:rtl;
+}
+.event-target{
+  background:rgba(184,104,0,.17);
+  box-shadow:inset 0 -.11em 0 rgba(184,104,0,.60);
+  border-radius:.10em;
+  padding:0 .04em;
+  color:inherit;
+}
+body.dark .event-target{
+  background:rgba(255,191,105,.14);
+  box-shadow:inset 0 -.11em 0 rgba(255,191,105,.56);
+}
+.event-badges{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin-top:4px;
+  font-size:10px;
+}
+.event-badge{
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:1px 6px;
+  opacity:.78;
+}
+.weak-row-rich{
+  display:block;
+  padding:8px 9px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  font-size:11px;
+}
+.weak-row-rich + .weak-row-rich{margin-top:6px}
+.weak-topline{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  margin-bottom:3px;
+}
+.weak-topline .word-text{font-family:"UthmanicHafs",serif;font-size:19px}
+.session-row summary{cursor:pointer}
+.session-row .event-list{margin:7px 0 3px}
+
 /* Modal/Summary/Statistics */
 .recitation-overlay{
   position:fixed;
@@ -1893,11 +1987,12 @@ function defaultMetric(){
 }
 function defaultRecitationData(){
   return {
-    version:1,
+    version:2,
     activeSession:null,
     sessions:[],
     words:{},
     ayahs:{},
+    ayahText:{},
     aggregate:{
       totalSessions:0,
       wordAssists:0,
@@ -1923,6 +2018,7 @@ function loadRecitationData(){
     const d=Object.assign(defaultRecitationData(),raw);
     d.words=d.words||{};
     d.ayahs=d.ayahs||{};
+    d.ayahText=d.ayahText||{};
     d.sessions=Array.isArray(d.sessions)?d.sessions:[];
     d.aggregate=Object.assign(defaultRecitationData().aggregate,d.aggregate||{});
     d.aggregate.byPage=d.aggregate.byPage||{};
@@ -1974,6 +2070,69 @@ function tokenMeta(t){
     text:t.text_uthmani||t.text_qpc_hafs||""
   };
 }
+
+function ayahSnapshotKey(surahNo,verse){
+  return `${Number(surahNo)||0}:${Number(verse)||0}`;
+}
+function buildCurrentAyahSnapshot(verse){
+  const words=tokensOfAyah(Number(verse)).map(t=>({
+    position:Number(t.position)||0,
+    text:t.text_uthmani||t.text_qpc_hafs||""
+  })).filter(x=>x.text);
+
+  if(!words.length) return null;
+
+  return {
+    surah:SURAH.number,
+    verse:Number(verse)||0,
+    text:words.map(w=>w.text).join(" "),
+    words
+  };
+}
+function ensureAyahSnapshot(verse){
+  recitationData.ayahText=recitationData.ayahText||{};
+  const key=ayahSnapshotKey(SURAH.number,verse);
+
+  if(!recitationData.ayahText[key]){
+    const snap=buildCurrentAyahSnapshot(verse);
+    if(snap) recitationData.ayahText[key]=snap;
+  }
+
+  return recitationData.ayahText[key]||null;
+}
+function getAyahSnapshot(surahNo,verse){
+  recitationData.ayahText=recitationData.ayahText||{};
+  const key=ayahSnapshotKey(surahNo,verse);
+
+  if(Number(surahNo)===Number(SURAH.number) && !recitationData.ayahText[key]){
+    ensureAyahSnapshot(verse);
+  }
+
+  return recitationData.ayahText[key]||null;
+}
+function backfillCurrentSurahAyahSnapshots(){
+  let changed=false;
+
+  const remember=(m)=>{
+    if(!m || Number(m.surah)!==Number(SURAH.number) || !Number(m.verse)) return;
+    const key=ayahSnapshotKey(m.surah,m.verse);
+    if(!recitationData.ayahText?.[key]){
+      const snap=buildCurrentAyahSnapshot(m.verse);
+      if(snap){
+        recitationData.ayahText[key]=snap;
+        changed=true;
+      }
+    }
+  };
+
+  Object.values(recitationData.words||{}).forEach(w=>remember(w.meta));
+  Object.values(recitationData.ayahs||{}).forEach(w=>remember(w.meta));
+  (activeSession?.events||[]).forEach(e=>remember(e.meta));
+  (recitationData.sessions||[]).forEach(s=>(s.events||[]).forEach(e=>remember(e.meta)));
+
+  if(changed) saveRecitationData();
+}
+
 function juzFromPage(page){
   const starts=[1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,482,502,522,542,562,582];
   let j=1;
@@ -2163,7 +2322,20 @@ function ensureAyahWeakness(t){
   return recitationData.ayahs[key];
 }
 function makeEvent(kind,key,t,before,repeated,relapse){
-  return {id:`e-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,kind,key,at:Date.now(),meta:tokenMeta(t),before,repeated:!!repeated,relapse:!!relapse};
+  const meta=tokenMeta(t);
+  const snap=t?.verse ? ensureAyahSnapshot(t.verse) : null;
+
+  return {
+    id:`e-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+    kind,
+    key,
+    at:Date.now(),
+    meta,
+    ayahTextKey:snap ? ayahSnapshotKey(meta.surah,meta.verse) : null,
+    before,
+    repeated:!!repeated,
+    relapse:!!relapse
+  };
 }
 function recordWordAssist(t,before){
   if(!activeSession||!t) return null;
@@ -2222,30 +2394,112 @@ function recordAyahAssist(t,before){
   showRecitationToast("Ayah Assist +1");
   return ev;
 }
+function manualErrorTargetToken(){
+  const current=currentBoundaryToken();
+
+  /*
+    إذا كان المؤشر نفسه على كلمة مخفية نستعملها.
+    وإلا فالخطأ اليدوي في سياق التسميع يخص الكلمة التالية المخفية،
+    لا آخر كلمة سبق إظهارها.
+  */
+  if(current && Number(current.hideIndex)>=Number(visibleCount)) return current;
+  return hideable[visibleCount] || current || null;
+}
+function flashManualErrorToken(t){
+  if(!t) return;
+
+  const el=document.querySelector(`.word[data-hide-index="${Number(t.hideIndex)}"]`);
+  if(!el) return;
+
+  el.classList.remove("manual-error-flash");
+  void el.offsetWidth;
+  el.classList.add("manual-error-flash");
+
+  setTimeout(()=>el.classList.remove("manual-error-flash"),950);
+}
+function revealManualErrorToken(t,ev){
+  if(!t||!ev) return false;
+
+  const idx=Number(t.hideIndex);
+
+  // لا نكشف أي كلمات وسيطة بالخطأ؛ نكشف فقط الكلمة التالية فعلا.
+  if(idx!==Number(visibleCount)) return false;
+
+  visibleCount=idx+1;
+  setCursorToken(idx);
+  updateVisibility();
+  markWordPassed(t);
+  trackSessionToken(t);
+
+  ev.revealedByManualError=true;
+  ev.after=captureReaderPosition();
+
+  saveReaderState();
+
+  if(autoScroll){
+    controlsToBottom();
+    ensureBoundaryVisible();
+    syncPageFieldFromViewport();
+  }else{
+    syncManualDisplayToToken(t);
+  }
+
+  return true;
+}
 function recordManualError(){
   if(!recitationMode||!activeSession) return;
-  const t=currentBoundaryToken();
+
+  const t=manualErrorTargetToken();
   if(!t) return;
+
   const key=wordKey(t);
+
   if(hasWordIncidentThisSession(key)){
+    // لا نضاعف الحدث، لكن نظهر للمستخدم بوضوح الكلمة المقصودة.
+    const existingHidden=Number(t.hideIndex)===Number(visibleCount);
+    if(existingHidden){
+      visibleCount=Number(t.hideIndex)+1;
+      setCursorToken(Number(t.hideIndex));
+      updateVisibility();
+      markWordPassed(t);
+      trackSessionToken(t);
+      saveReaderState();
+    }
+    flashManualErrorToken(t);
     showRecitationToast("الكلمة مسجلة بالفعل؛ لم يتكرر الحدث");
     return;
   }
+
+  const before=captureReaderPosition();
   const w=ensureWordWeakness(t);
   const historical=(w.totalWordAssists+w.totalManualErrors)>0;
   const relapse=w.score===0 && historical;
   const repeated=w.score>0 || historical;
+
   w.score=(Number(w.score)||0)+1;
   w.totalManualErrors=(Number(w.totalManualErrors)||0)+1;
   if(relapse) w.relapses=(Number(w.relapses)||0)+1;
-  w.lastAt=Date.now(); w.lastIncidentSessionId=activeSession.id;
+
+  w.lastAt=Date.now();
+  w.lastIncidentSessionId=activeSession.id;
+
   delete activeSession.cleanWordCandidates[key];
   delete activeSession.cleanAyahCandidates[ayahKey(t.verse)];
   activeSession.currentCleanWords=0;
-  activeSession.events.push(makeEvent("manualError",key,t,captureReaderPosition(),repeated,relapse));
+
+  const ev=makeEvent("manualError",key,t,before,repeated,relapse);
+  activeSession.events.push(ev);
   trackSessionToken(t);
-  saveRecitationData(); updateWeaknessHighlights(); updateSessionControls();
-  showRecitationToast("خطأ يدوي +1");
+
+  // الكشف الناتج عن الخطأ اليدوي ليس Word Assist.
+  revealManualErrorToken(t,ev);
+  flashManualErrorToken(t);
+
+  saveRecitationData();
+  updateWeaknessHighlights();
+  updateSessionControls();
+
+  showRecitationToast(`خطأ يدوي +1 — الآية ${t.verse}`);
 }
 
 function noteCleanWordProgress(t){
@@ -2322,8 +2576,17 @@ function undoLastRecitationEvent(){
     if(Number(ev.meta?.surah)===SURAH.number){
       tokensOfAyah(ev.meta?.verse).forEach(t=>delete activeSession.passedWordKeys?.[wordKey(t)]);
     }
+  }else if(ev.kind==="manualError" && ev.revealedByManualError){
+    delete activeSession.passedWordKeys?.[ev.key];
   }
-  if((ev.kind==="wordAssist"||ev.kind==="ayahAssist") && ev.after && Number(ev.after.surah)===SURAH.number && Number(ev.after.visibleCount)===visibleCount){
+
+  const shouldRestoreReveal =
+    (ev.kind==="wordAssist" || ev.kind==="ayahAssist" || (ev.kind==="manualError"&&ev.revealedByManualError)) &&
+    ev.after &&
+    Number(ev.after.surah)===SURAH.number &&
+    Number(ev.after.visibleCount)===visibleCount;
+
+  if(shouldRestoreReveal){
     restoreReaderPosition(ev.before);
   }
   saveRecitationData(); updateWeaknessHighlights(); updateSessionControls();
@@ -2469,7 +2732,8 @@ function endRecitationSession(){
     healedCount:(session.healed||[]).length,
     longestCleanWords:Number(session.longestCleanWords)||0,
     assistsPerPage:pageCount?c.totalAssists/pageCount:0,
-    byJuz:sessionAssistMap(session,"juz")
+    byJuz:sessionAssistMap(session,"juz"),
+    events:archiveSessionEvents(session.events)
   };
   commitSessionAggregates(session,summary);
   updateKhatmah(session,summary);
@@ -2482,6 +2746,24 @@ function endRecitationSession(){
   updateWeaknessHighlights();
   showSessionSummary(summary);
 }
+
+function archiveEvent(ev){
+  if(!ev) return null;
+  return {
+    id:ev.id,
+    kind:ev.kind,
+    key:ev.key,
+    at:ev.at,
+    meta:ev.meta,
+    ayahTextKey:ev.ayahTextKey||ayahSnapshotKey(ev.meta?.surah,ev.meta?.verse),
+    repeated:!!ev.repeated,
+    relapse:!!ev.relapse
+  };
+}
+function archiveSessionEvents(events){
+  return (events||[]).map(archiveEvent).filter(Boolean);
+}
+
 function sessionAssistMap(session,field){
   const out={};
   for(const ev of session.events||[]){
@@ -2531,6 +2813,7 @@ function initRecitationAfterRender(){
   }
   applyRecitationModeUI();
   updateWeaknessHighlights();
+  backfillCurrentSurahAyahSnapshots();
 }
 
 function updateWeaknessHighlights(){
@@ -2583,6 +2866,89 @@ function summaryRange(s){
   if(a.surah===b.surah) return `${surahName(a.surah)}: ${a.verse||1}–${b.verse||1}`;
   return `${surahName(a.surah)} ${a.verse||1} ← ${surahName(b.surah)} ${b.verse||1}`;
 }
+
+function eventKindLabel(kind){
+  if(kind==="wordAssist") return "مساعدة كلمة";
+  if(kind==="ayahAssist") return "مساعدة آية";
+  if(kind==="manualError") return "خطأ يدوي";
+  return kind||"حدث";
+}
+function renderAyahSnapshot(snapshot,targetPosition=null){
+  if(!snapshot) return '<span style="opacity:.6">نص الآية غير متاح في السجل القديم.</span>';
+
+  const words=Array.isArray(snapshot.words)?snapshot.words:[];
+
+  if(words.length){
+    return words.map(w=>{
+      const text=escapeHtml(w.text||"");
+      if(targetPosition!==null && Number(w.position)===Number(targetPosition)){
+        return `<span class="event-target">${text}</span>`;
+      }
+      return text;
+    }).join(" ");
+  }
+
+  return escapeHtml(snapshot.text||"");
+}
+function eventDetailHtml(ev){
+  const m=ev?.meta||{};
+  const snap=getAyahSnapshot(m.surah,m.verse);
+  const target=(ev.kind==="ayahAssist") ? null : (Number(m.position)||null);
+  const wordText=(ev.kind==="ayahAssist") ? "" : (m.text||"");
+  const badges=[
+    ev.repeated ? '<span class="event-badge">متكرر</span>' : "",
+    ev.relapse ? '<span class="event-badge">عاد بعد تحسن</span>' : ""
+  ].filter(Boolean).join("");
+
+  return `
+    <div class="event-card">
+      <div class="event-head">
+        <div>
+          <b>${eventKindLabel(ev.kind)}</b>
+          — ${escapeHtml(surahName(m.surah))}، الآية ${fmtNumber(m.verse)}
+          ${wordText?` — الكلمة: <b>${escapeHtml(wordText)}</b>`:""}
+        </div>
+        <div class="event-meta">${fmtDate(ev.at)}</div>
+      </div>
+      <div class="event-ayah">${renderAyahSnapshot(snap,target)}</div>
+      ${badges?`<div class="event-badges">${badges}</div>`:""}
+    </div>
+  `;
+}
+function eventDetailList(events,emptyText="لا توجد أخطاء أو مساعدات في هذه الجلسة."){
+  const arr=(events||[]).filter(e=>e && ["wordAssist","ayahAssist","manualError"].includes(e.kind));
+  if(!arr.length) return `<div style="font-size:12px;opacity:.65;margin-top:6px">${emptyText}</div>`;
+  return `<div class="event-list">${arr.map(eventDetailHtml).join("")}</div>`;
+}
+function allEventHistoryRows(limit=300){
+  const rows=[];
+
+  for(const s of recitationData.sessions||[]){
+    for(const e of s.events||[]){
+      rows.push({...e,sessionStartedAt:s.startedAt});
+    }
+  }
+
+  if(activeSession){
+    for(const e of activeSession.events||[]){
+      rows.push({...archiveEvent(e),sessionStartedAt:activeSession.startedAt});
+    }
+  }
+
+  rows.sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
+  const shown=rows.slice(0,limit);
+
+  if(!shown.length){
+    return '<div style="font-size:12px;opacity:.65;margin-top:6px">لا توجد أخطاء أو مساعدات مسجلة بعد.</div>';
+  }
+
+  const note=rows.length>limit
+    ? `<div style="font-size:10px;opacity:.6;margin-top:6px">يعرض أحدث ${fmtNumber(limit)} حدثا من أصل ${fmtNumber(rows.length)}.</div>`
+    : "";
+
+  return eventDetailList(shown)+note;
+}
+
 function showSessionSummary(s){
   const ov=document.getElementById("sessionSummaryOverlay"),body=document.getElementById("sessionSummaryBody");
   if(!ov||!body) return;
@@ -2603,6 +2969,8 @@ function showSessionSummary(s){
     <div style="font-size:12px;line-height:1.7"><b>الصفحات:</b> ${s.pages?.length ? (s.pages.length===1 ? s.pages[0] : `${s.pages[0]}–${s.pages[s.pages.length-1]}`) : "—"}</div>
     <div style="font-size:12px;line-height:1.7"><b>Assists حسب الجزء:</b> ${juzText}</div>
     ${s.longestCleanWords?`<div style="font-size:12px;margin-top:5px"><b>أطول مقطع مؤكد بلا مساعدة:</b> ${fmtNumber(s.longestCleanWords)} كلمة</div>`:""}
+    <h3>تفاصيل الأخطاء والمساعدات</h3>
+    ${eventDetailList(s.events)}
   `;
   ov.hidden=false;
 }
@@ -2621,25 +2989,81 @@ function metricTable(map,labelFn,rateDenom="visits",rateLabel="Assist/زيارة
   return `<div style="overflow:auto"><table class="stats-table"><thead><tr><th>الموضع</th><th>كلمة</th><th>آية</th><th>يدوي</th><th>Assist</th><th>${rateLabel}</th><th>تعافى</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function weakestRows(){
-  const words=Object.values(recitationData.words||{}).filter(w=>(Number(w.score)||0)>0).sort((a,b)=>(b.score-a.score)-0 || ((b.totalWordAssists+b.totalManualErrors)-(a.totalWordAssists+a.totalManualErrors))).slice(0,40);
-  const ayahs=Object.values(recitationData.ayahs||{}).filter(w=>(Number(w.score)||0)>0).sort((a,b)=>b.score-a.score || b.totalAyahAssists-a.totalAyahAssists).slice(0,20);
+  const words=Object.values(recitationData.words||{})
+    .filter(w=>(Number(w.score)||0)>0)
+    .sort((a,b)=>(b.score-a.score)-0 || ((b.totalWordAssists+b.totalManualErrors)-(a.totalWordAssists+a.totalManualErrors)))
+    .slice(0,40);
+
+  const ayahs=Object.values(recitationData.ayahs||{})
+    .filter(w=>(Number(w.score)||0)>0)
+    .sort((a,b)=>b.score-a.score || b.totalAyahAssists-a.totalAyahAssists)
+    .slice(0,20);
+
   let html='<div class="weak-list">';
+
   for(const w of words){
     const m=w.meta||{};
-    html+=`<div class="weak-row"><div><span class="word-text">${escapeHtml(m.text||"")}</span> · ${surahName(m.surah)} ${m.verse}:${m.position}</div><b>ضعف ${fmtNumber(w.score)}</b><span>ك ${fmtNumber(w.totalWordAssists)} · خ ${fmtNumber(w.totalManualErrors)}</span></div>`;
+    const snap=getAyahSnapshot(m.surah,m.verse);
+
+    html+=`
+      <div class="weak-row-rich">
+        <div class="weak-topline">
+          <div>
+            <span class="word-text">${escapeHtml(m.text||"")}</span>
+            · ${escapeHtml(surahName(m.surah))}، الآية ${fmtNumber(m.verse)}
+          </div>
+          <b>ضعف ${fmtNumber(w.score)}</b>
+        </div>
+        <div style="font-size:10px;opacity:.7;margin-bottom:3px">
+          Word Assist ${fmtNumber(w.totalWordAssists)} · خطأ يدوي ${fmtNumber(w.totalManualErrors)}
+        </div>
+        <div class="event-ayah">${renderAyahSnapshot(snap,Number(m.position)||null)}</div>
+      </div>`;
   }
+
   for(const a of ayahs){
     const m=a.meta||{};
-    html+=`<div class="weak-row"><div>${surahName(m.surah)} · الآية ${m.verse}</div><b>ضعف ${fmtNumber(a.score)}</b><span>آ ${fmtNumber(a.totalAyahAssists)}</span></div>`;
+    const snap=getAyahSnapshot(m.surah,m.verse);
+
+    html+=`
+      <div class="weak-row-rich">
+        <div class="weak-topline">
+          <div>${escapeHtml(surahName(m.surah))}، الآية ${fmtNumber(m.verse)}</div>
+          <b>ضعف ${fmtNumber(a.score)}</b>
+        </div>
+        <div style="font-size:10px;opacity:.7;margin-bottom:3px">
+          Ayah Assist ${fmtNumber(a.totalAyahAssists)}
+        </div>
+        <div class="event-ayah">${renderAyahSnapshot(snap,null)}</div>
+      </div>`;
   }
+
   html+='</div>';
-  return words.length||ayahs.length?html:'<div style="font-size:12px;opacity:.65;margin-top:6px">لا توجد مواضع ضعف حالية.</div>';
+
+  return words.length||ayahs.length
+    ? html
+    : '<div style="font-size:12px;opacity:.65;margin-top:6px">لا توجد مواضع ضعف حالية.</div>';
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function sessionHistoryRows(){
   const arr=[...(recitationData.sessions||[])].reverse().slice(0,60);
-  if(!arr.length) return '<div style="font-size:12px;opacity:.65;margin-top:6px">لا توجد جلسات منتهية بعد.</div>';
-  return arr.map(s=>`<div class="session-row"><b>${fmtDate(s.startedAt)}</b> · ${summaryRange(s)}<br>${fmtNumber(s.pageCount)} صفحة · ${fmtDuration(s.durationMs)} · Assist ${fmtNumber(s.totalAssists)} · يدوي ${fmtNumber(s.manualErrors)} · تعافى ${fmtNumber(s.healedCount)}</div>`).join('');
+
+  if(!arr.length){
+    return '<div style="font-size:12px;opacity:.65;margin-top:6px">لا توجد جلسات منتهية بعد.</div>';
+  }
+
+  return arr.map(s=>`
+    <details class="session-row">
+      <summary>
+        <b>${fmtDate(s.startedAt)}</b> · ${summaryRange(s)}
+        — ${fmtNumber(s.pageCount)} صفحة · ${fmtDuration(s.durationMs)}
+        · Assist ${fmtNumber(s.totalAssists)} · يدوي ${fmtNumber(s.manualErrors)}
+      </summary>
+      ${Array.isArray(s.events)
+        ? eventDetailList(s.events)
+        : '<div style="font-size:11px;opacity:.6;margin-top:6px">هذه جلسة من إصدار أقدم؛ لم تكن تفاصيل الأحداث تحفظ وقتها.</div>'}
+    </details>
+  `).join('');
 }
 function khatmahRows(){
   const done=recitationData.khatmah?.completed||[];
@@ -2675,6 +3099,7 @@ function renderStats(){
     </div>
     <div class="marks-toggle"><input id="weakMarksCheckbox" type="checkbox" ${weaknessMarksEnabled?"checked":""}><label for="weakMarksCheckbox">إظهار علامات الضعف الحالية فوق طبقة التجويد</label></div>
     <details class="stats-details" open><summary>أضعف المواضع الحالية</summary>${weakestRows()}</details>
+    <details class="stats-details" open><summary>سجل الأخطاء والمساعدات</summary>${allEventHistoryRows()}</details>
     <details class="stats-details"><summary>الختمات</summary>${khatmahRows()}</details>
     <details class="stats-details"><summary>حسب الجزء</summary>${metricTable(a.byJuz,k=>`الجزء ${k}`,"pagesReviewed","Assist/Page")}</details>
     <details class="stats-details"><summary>حسب الحزب</summary>${metricTable(a.byHizb,k=>`الحزب ${k}`,"pagesReviewed","Assist/Page")}</details>
