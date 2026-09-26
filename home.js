@@ -1,6 +1,9 @@
 const listEl=document.getElementById('surahList');
 const searchEl=document.getElementById('search');
 const installBtn=document.getElementById('installBtn');
+const installHelp=document.getElementById('installHelp');
+const installHelpText=document.getElementById('installHelpText');
+const installHelpClose=document.getElementById('installHelpClose');
 const offlineAllBtn=document.getElementById('offlineAllBtn');
 const offlineAllProgress=document.getElementById('offlineAllProgress');
 const offlineAllBar=offlineAllProgress.querySelector('span');
@@ -19,9 +22,71 @@ renderList(); searchEl.addEventListener('input',()=>renderList(searchEl.value));
 function latestReaderState(){let best=null; SURAHS.forEach(s=>{try{const state=JSON.parse(localStorage.getItem(`quran_reader_state_${s.number}_v1`)||'null'); if(!state)return; const c={surah:s,state}; if(!best||Number(state.updatedAt||0)>Number(best.state.updatedAt||0))best=c;}catch(e){}}); return best;}
 function showResume(){const f=latestReaderState(); if(!f)return; const {surah,state}=f; document.getElementById('resumeCard').classList.add('show'); document.getElementById('resumeMeta').textContent=`${surah.name} — صفحة ${state.page||surah.firstPage} — آية ${state.ayah||1}`; document.getElementById('resumeBtn').href=`./reader.html?surah=${surah.number}`;}
 showResume();
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;installBtn.hidden=false;});
-installBtn.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;installBtn.hidden=true;});
-window.addEventListener('appinstalled',()=>{installBtn.hidden=true;});
+function isStandalone(){
+  return window.matchMedia?.('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true;
+}
+
+function updateInstallButton(){
+  if(isStandalone()){
+    installBtn.textContent='التطبيق مثبت';
+    installBtn.classList.add('installed');
+    installBtn.setAttribute('aria-disabled','true');
+  }else{
+    installBtn.textContent='تثبيت التطبيق';
+    installBtn.classList.remove('installed');
+    installBtn.removeAttribute('aria-disabled');
+  }
+}
+
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  updateInstallButton();
+});
+
+installBtn.addEventListener('click',async()=>{
+  if(isStandalone()){
+    installHelpText.textContent='أنت تستخدم التطبيق بالفعل في وضع التثبيت.';
+    installHelp.hidden=false;
+    return;
+  }
+
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const choice=await deferredPrompt.userChoice;
+    deferredPrompt=null;
+
+    if(choice?.outcome==='accepted'){
+      installBtn.textContent='جار التثبيت…';
+    }else{
+      updateInstallButton();
+    }
+    return;
+  }
+
+  /*
+    لا يوجد API قياسي يجبر المتصفح على إظهار نافذة التثبيت.
+    لذلك نبقي الزر موجودا ونقدم fallback واضحا.
+  */
+  installHelpText.textContent=
+    'افتح قائمة المتصفح (⋮ أو ☰)، ثم اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية». إذا لم يظهر الخيار، أعد تحميل الصفحة بعد ثوان قليلة.';
+  installHelp.hidden=false;
+});
+
+installHelpClose.addEventListener('click',()=>{
+  installHelp.hidden=true;
+});
+
+window.addEventListener('appinstalled',()=>{
+  installHelp.hidden=true;
+  updateInstallButton();
+});
+
+window.matchMedia?.('(display-mode: standalone)')
+  .addEventListener?.('change',updateInstallButton);
+
+updateInstallButton();
 async function registerSW(){if(!('serviceWorker' in navigator))return null;return navigator.serviceWorker.register('./sw.js',{scope:'./'});} const swRegistration=registerSW();
 function pageApiUrl(p){return `https://api.quran.com/api/v4/verses/by_page/${p}?words=true&word_fields=code_v2,text_qpc_hafs,text_uthmani,line_number,page_number&per_page=50`;}
 function pageFontUrl(p){return `https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p${p}.woff2`;}

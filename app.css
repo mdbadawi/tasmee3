@@ -7,7 +7,7 @@ body{direction:rtl}
 .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
 .hero h1{margin:0;font-size:26px;font-weight:700}.hero p{margin:4px 0 0;color:var(--muted);font-size:13px}
 .install-btn,.download-btn,.resume-btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:11px;padding:10px 13px;font-size:14px;cursor:pointer}
-.install-btn[hidden]{display:none}.download-btn:disabled{opacity:.55;cursor:default}
+.download-btn:disabled{opacity:.55;cursor:default}
 .resume-card{display:none;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0 16px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
 .resume-card.show{display:block}.resume-title{font-size:16px;font-weight:700}.resume-meta{font-size:13px;color:var(--muted);margin-top:4px}.resume-actions{margin-top:11px;display:flex;gap:8px;flex-wrap:wrap}
 .toolbar{display:flex;gap:8px;align-items:center;margin:12px 0}.search{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:11px;padding:11px 12px;font-size:15px;outline:none}
@@ -28,3 +28,25 @@ body{direction:rtl}
 .offline-item .offline-pages{font-size:12px;color:var(--muted);margin-top:2px}
 
 .offline-box .offline-row{margin-top:8px}.offline-box .download-btn{white-space:nowrap}
+
+.install-help{
+  margin:-4px 0 14px;
+  padding:12px 13px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--card);
+  box-shadow:0 4px 18px rgba(0,0,0,.06);
+}
+.install-help[hidden]{display:none}
+.install-help-title{font-size:15px;font-weight:700;margin-bottom:5px}
+.install-help-text{font-size:13px;line-height:1.7;color:var(--muted)}
+.install-help-close{
+  margin-top:9px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:transparent;
+  color:var(--ink);
+  padding:7px 12px;
+  cursor:pointer;
+}
+.install-btn.installed{opacity:.7}
