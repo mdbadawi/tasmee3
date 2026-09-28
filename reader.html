@@ -1124,8 +1124,8 @@ const SURAH=getSurahConfig(params.get("surah")||2);
 if(!SURAH || !SURAH.enabled){ location.replace("./index.html"); throw new Error("Surah unavailable"); }
 document.title=`${SURAH.name} — مصحف الحفظ`;
 document.getElementById("readerHeading").textContent=`سورة ${SURAH.name} — مصحف المدينة`;
-const FIRST_PAGE = SURAH.firstPage;
-const LAST_PAGE = SURAH.lastPage;
+let FIRST_PAGE = SURAH.firstPage;
+let LAST_PAGE = SURAH.lastPage;
 const DATA_CACHE = `qcf_v2_surah_${SURAH.number}_${FIRST_PAGE}_${LAST_PAGE}_${SURAH.cacheVersion||"v1"}`;
 const STATE_KEY = `quran_reader_state_${SURAH.number}_v1`;
 
@@ -1203,20 +1203,27 @@ async function loadPageFont(page){
   return name;
 }
 
-function qcfV2PageOf(word){
-  const v2=Number(word?.v2_page);
-  if(Number.isFinite(v2) && v2>0) return v2;
-
-  const selected=Number(word?.page_number);
-  return Number.isFinite(selected) && selected>0 ? selected : null;
+function selectedMushafPageOf(word){
+  const page=Number(word?.page_number);
+  return Number.isFinite(page) && page>0 ? page : null;
 }
 
-function qcfV2LineOf(word){
-  const v2=Number(word?.line_v2);
-  if(Number.isFinite(v2) && v2>0) return v2;
+function selectedMushafLineOf(word){
+  const line=Number(word?.line_number);
+  return Number.isFinite(line) && line>0 ? line : null;
+}
 
-  const selected=Number(word?.line_number);
-  return Number.isFinite(selected) && selected>0 ? selected : null;
+/* v2_page / line_v2 تبقى معلومات تشخيصية فقط.
+   عند استخدام by_page + mushaf=1 فإن page_number / line_number
+   هما موضع الكلمة في التخطيط الذي طلبناه. */
+function qcfV2DiagnosticPageOf(word){
+  const page=Number(word?.v2_page);
+  return Number.isFinite(page) && page>0 ? page : null;
+}
+
+function qcfV2DiagnosticLineOf(word){
+  const line=Number(word?.line_v2);
+  return Number.isFinite(line) && line>0 ? line : null;
 }
 
 function mushafIntegrityError(page,message,details={}){
@@ -1228,12 +1235,12 @@ function mushafIntegrityError(page,message,details={}){
 }
 
 function validatePageIntegrity(page,tokens,sourceWords){
-  if(!Array.isArray(sourceWords) || sourceWords.length===0){
-    throw mushafIntegrityError(page,"لم تصل كلمات الصفحة من مصدر المصحف.");
+  if(!Array.isArray(sourceWords)){
+    throw mushafIntegrityError(page,"صيغة بيانات الصفحة غير صالحة.");
   }
 
-  if(!Array.isArray(tokens) || tokens.length===0){
-    throw mushafIntegrityError(page,"تم جلب الصفحة لكن لم يبق أي عنصر صالح للرسم.");
+  if(!Array.isArray(tokens)){
+    throw mushafIntegrityError(page,"تعذر تكوين عناصر الصفحة.");
   }
 
   const badLines=tokens.filter(t=>
@@ -1258,25 +1265,28 @@ function validatePageIntegrity(page,tokens,sourceWords){
     );
   }
 
-  const sourceOnPage=sourceWords.filter(x=>qcfV2PageOf(x.word)===Number(page));
-
   /*
-    أهم invariant: كل عنصر تابع لهذه السورة وله v2_page=الصفحة المطلوبة
-    يجب أن يصل إلى tokens. أي فرق هنا يعني أننا أسقطنا كلمة/فاصل بصمت.
+    by_page قد يعيد آية تمتد على حد صفحتين. لذلك لا نقارن بعدد كل
+    words داخل verse؛ نقارن فقط الكلمات التي يقول page_number
+    (في mushaf=1) إنها تنتمي فعلا إلى هذه الصفحة.
   */
-  if(sourceOnPage.length!==tokens.length){
+  const expectedOnPage=sourceWords.filter(
+    x=>selectedMushafPageOf(x.word)===Number(page)
+  );
+
+  if(expectedOnPage.length!==tokens.length){
     throw mushafIntegrityError(
       page,
-      `عدد عناصر QCF V2 في المصدر (${sourceOnPage.length}) لا يساوي عدد العناصر المعدة للرسم (${tokens.length}).`
+      `عدد عناصر الصفحة حسب page_number (${expectedOnPage.length}) لا يساوي العناصر المعدة للرسم (${tokens.length}).`
     );
   }
 
-  // الكلمات العادية في QCF V2 يجب أن تحمل glyph code.
   const missingGlyph=tokens.filter(t=>
     !isEnd(t) &&
     t.char_type_name==="word" &&
     !String(t.code_v2||"").trim()
   );
+
   if(missingGlyph.length){
     throw mushafIntegrityError(
       page,
@@ -1292,6 +1302,7 @@ async function fetchPage(page){
     `${API_BASE}/verses/by_page/${page}` +
     `?words=true` +
     `&mushaf=${MUSHAF_ID}` +
+    `&fields=verse_key,chapter_id,verse_number,juz_number,hizb_number` +
     `&word_fields=code_v2,text_qpc_hafs,text_uthmani,location,v2_page,line_v2,line_number,page_number` +
     `&per_page=50`;
 
@@ -1305,29 +1316,36 @@ async function fetchPage(page){
   const sourceWords = [];
 
   verses.forEach(verse => {
-    if(
-      verse.chapter_id !== SURAH.number &&
-      !String(verse.verse_key || "").startsWith(`${SURAH.number}:`)
-    ){
-      return;
-    }
+    const verseKey=String(verse.verse_key||"");
+    const belongsToSurah=
+      Number(verse.chapter_id)===Number(SURAH.number) ||
+      verseKey.startsWith(`${SURAH.number}:`);
+
+    if(!belongsToSurah) return;
 
     (verse.words || []).forEach(word => {
       sourceWords.push({word,verse});
 
       /*
-        نربط glyph code_v2 بالصفحة/السطر الخاصين بـQCF V2.
-        v2_page/line_v2 لهما الأولوية، ثم page_number/line_number
-        كـfallback لأن الطلب نفسه مثبت على mushaf=1.
+        CRITICAL:
+        لأن الطلب نفسه by_page(page) + mushaf=1، فإن page_number
+        و line_number هما عقد التخطيط المختار. لا نستعمل v2_page
+        لتقرير الانتماء للصفحة.
       */
-      const v2Page=qcfV2PageOf(word);
-      if(v2Page!==Number(page)) return;
+      const selectedPage=selectedMushafPageOf(word);
+      if(selectedPage!==Number(page)) return;
 
-      const line=qcfV2LineOf(word);
+      const line=selectedMushafLineOf(word);
       if(!(line>=1 && line<=MUSHAF_LINES_PER_PAGE)){
         throw mushafIntegrityError(
           page,
-          `العنصر ${word.location||word.verse_key||""} له سطر QCF V2 غير صالح: ${line}.`
+          `العنصر ${word.location||word.verse_key||""} له line_number غير صالح في Mushaf 1: ${line}.`,
+          {
+            page_number:selectedPage,
+            line_number:line,
+            v2_page:qcfV2DiagnosticPageOf(word),
+            line_v2:qcfV2DiagnosticLineOf(word)
+          }
         );
       }
 
@@ -1351,23 +1369,93 @@ async function fetchPage(page){
   return {page,tokens};
 }
 
+function verifyCompleteSurahAndNormalizePages(pages){
+  const nonEmpty=(pages||[]).filter(p=>Array.isArray(p.tokens) && p.tokens.length);
+
+  if(!nonEmpty.length){
+    const err=new Error(`لم تصل أي كلمات لسورة ${SURAH.name} من تخطيط Mushaf 1.`);
+    err.code="MUSHAF_INTEGRITY";
+    throw err;
+  }
+
+  const seenVerses=new Set();
+  const endMarkers=new Set();
+
+  for(const p of nonEmpty){
+    for(const t of p.tokens){
+      const v=Number(t.verse)||0;
+      if(v>0) seenVerses.add(v);
+      if(v>0 && isEnd(t)) endMarkers.add(v);
+    }
+  }
+
+  const missingVerses=[];
+  for(let v=1;v<=Number(SURAH.ayahCount);v++){
+    if(!seenVerses.has(v)) missingVerses.push(v);
+  }
+
+  if(missingVerses.length){
+    const err=new Error(
+      `سورة ${SURAH.name}: مفقود ${missingVerses.length} آية من بيانات Mushaf 1: `+
+      missingVerses.slice(0,20).join("، ")+
+      (missingVerses.length>20?"…":"")
+    );
+    err.code="MUSHAF_INTEGRITY";
+    err.details={missingVerses};
+    throw err;
+  }
+
+  const missingEnds=[];
+  for(let v=1;v<=Number(SURAH.ayahCount);v++){
+    if(!endMarkers.has(v)) missingEnds.push(v);
+  }
+
+  if(missingEnds.length){
+    const err=new Error(
+      `سورة ${SURAH.name}: لم يصل فاصل نهاية الآية لعدد ${missingEnds.length} من الآيات: `+
+      missingEnds.slice(0,20).join("، ")+
+      (missingEnds.length>20?"…":"")
+    );
+    err.code="MUSHAF_INTEGRITY";
+    err.details={missingEnds};
+    throw err;
+  }
+
+  const actualFirst=Math.min(...nonEmpty.map(p=>Number(p.page)));
+  const actualLast=Math.max(...nonEmpty.map(p=>Number(p.page)));
+
+  FIRST_PAGE=actualFirst;
+  LAST_PAGE=actualLast;
+
+  return nonEmpty.sort((a,b)=>a.page-b.page);
+}
+
 async function loadAllPages(){
-  /* Cache Storage في الـService Worker هو مخزن بيانات الصفحات والخطوط. */
+  /*
+    surahs.js مجرد hint للتنقل الأولي. نقرأ صفحة قبل البداية وبعد النهاية
+    حتى لا تسبب حدود قديمة/off-by-one إسقاط آخر آيات السورة.
+    بعد الجلب نشتق FIRST_PAGE/LAST_PAGE من الكلمات نفسها.
+  */
+  const hintedFirst=Number(SURAH.firstPage)||1;
+  const hintedLast=Number(SURAH.lastPage)||hintedFirst;
+  const fetchFirst=Math.max(1,hintedFirst-1);
+  const fetchLast=Math.min(604,hintedLast+1);
+
   const result = [];
   const batchSize = 4;
 
-  for(let start=FIRST_PAGE; start<=LAST_PAGE; start+=batchSize){
+  for(let start=fetchFirst; start<=fetchLast; start+=batchSize){
     const nums = [];
-    for(let p=start; p<start+batchSize && p<=LAST_PAGE; p++) nums.push(p);
+    for(let p=start;p<start+batchSize && p<=fetchLast;p++) nums.push(p);
 
     document.getElementById("loading").textContent =
-      `جار تحميل الصفحات ${nums[0]}–${nums[nums.length-1]} من مصحف المدينة…`;
+      `جار التحقق من صفحات ${nums[0]}–${nums[nums.length-1]} في Mushaf 1…`;
 
-    const batch = await Promise.all(nums.map(fetchPage));
+    const batch=await Promise.all(nums.map(fetchPage));
     result.push(...batch);
   }
 
-  pageData = result.sort((a,b)=>a.page-b.page);
+  pageData=verifyCompleteSurahAndNormalizePages(result);
   await prepareAndRender();
 }
 
@@ -4458,7 +4546,7 @@ loadAllPages().catch(err=>{
     document.getElementById("pages").innerHTML=
       `<div class="error">
         <b>تم إيقاف عرض الصفحة لحماية سلامة نص المصحف.</b><br>
-        اكتشف التطبيق تعارضا في تخطيط QCF V2، ولذلك لم يحاول عرض صفحة ناقصة أو إسقاط كلمات بصمت.<br><br>
+        اكتشف التطبيق نقصاً أو تعارضاً في بيانات سورة Mushaf 1، ولذلك رفض عرض مصحف ناقص أو إسقاط آية بصمت.<br><br>
         ${escapeHtml(String(err.message || err))}
       </div>`;
     return;

@@ -1,4 +1,4 @@
-const VERSION='quran-memorizer-pwa-v13-mushaf1-integrity';
+const VERSION='quran-memorizer-pwa-v14-mushaf1-page-contract';
 const SHELL=VERSION+'-shell',RUNTIME='quran-memorizer-runtime-v1';
 const APP_SHELL=['./','./index.html','./reader.html','./app.css','./home.js','./surahs.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(SHELL).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting())));
