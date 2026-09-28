@@ -1130,6 +1130,8 @@ const DATA_CACHE = `qcf_v2_surah_${SURAH.number}_${FIRST_PAGE}_${LAST_PAGE}_${SU
 const STATE_KEY = `quran_reader_state_${SURAH.number}_v1`;
 
 const API_BASE = "https://api.quran.com/api/v4";
+const MUSHAF_ID = 1; // QCF V2 / Madani Mushaf, 604 pages, 15 lines
+const MUSHAF_LINES_PER_PAGE = 15;
 const FONT_BASE = "https://verses.quran.foundation/fonts/quran/hafs/v2/woff2";
 
 let pageData = [];
@@ -1201,11 +1203,96 @@ async function loadPageFont(page){
   return name;
 }
 
+function qcfV2PageOf(word){
+  const v2=Number(word?.v2_page);
+  if(Number.isFinite(v2) && v2>0) return v2;
+
+  const selected=Number(word?.page_number);
+  return Number.isFinite(selected) && selected>0 ? selected : null;
+}
+
+function qcfV2LineOf(word){
+  const v2=Number(word?.line_v2);
+  if(Number.isFinite(v2) && v2>0) return v2;
+
+  const selected=Number(word?.line_number);
+  return Number.isFinite(selected) && selected>0 ? selected : null;
+}
+
+function mushafIntegrityError(page,message,details={}){
+  const err=new Error(`خطأ سلامة في صفحة ${page}: ${message}`);
+  err.code="MUSHAF_INTEGRITY";
+  err.page=page;
+  err.details=details;
+  return err;
+}
+
+function validatePageIntegrity(page,tokens,sourceWords){
+  if(!Array.isArray(sourceWords) || sourceWords.length===0){
+    throw mushafIntegrityError(page,"لم تصل كلمات الصفحة من مصدر المصحف.");
+  }
+
+  if(!Array.isArray(tokens) || tokens.length===0){
+    throw mushafIntegrityError(page,"تم جلب الصفحة لكن لم يبق أي عنصر صالح للرسم.");
+  }
+
+  const badLines=tokens.filter(t=>
+    !Number.isFinite(Number(t.line)) ||
+    Number(t.line)<1 ||
+    Number(t.line)>MUSHAF_LINES_PER_PAGE
+  );
+
+  if(badLines.length){
+    throw mushafIntegrityError(
+      page,
+      `وجد ${badLines.length} عنصر خارج نطاق الأسطر 1–${MUSHAF_LINES_PER_PAGE}.`,
+      {badLines:badLines.slice(0,8)}
+    );
+  }
+
+  const invalidVerses=tokens.filter(t=>!(Number(t.verse)>0));
+  if(invalidVerses.length){
+    throw mushafIntegrityError(
+      page,
+      `وجد ${invalidVerses.length} عنصر بلا رقم آية صالح.`
+    );
+  }
+
+  const sourceOnPage=sourceWords.filter(x=>qcfV2PageOf(x.word)===Number(page));
+
+  /*
+    أهم invariant: كل عنصر تابع لهذه السورة وله v2_page=الصفحة المطلوبة
+    يجب أن يصل إلى tokens. أي فرق هنا يعني أننا أسقطنا كلمة/فاصل بصمت.
+  */
+  if(sourceOnPage.length!==tokens.length){
+    throw mushafIntegrityError(
+      page,
+      `عدد عناصر QCF V2 في المصدر (${sourceOnPage.length}) لا يساوي عدد العناصر المعدة للرسم (${tokens.length}).`
+    );
+  }
+
+  // الكلمات العادية في QCF V2 يجب أن تحمل glyph code.
+  const missingGlyph=tokens.filter(t=>
+    !isEnd(t) &&
+    t.char_type_name==="word" &&
+    !String(t.code_v2||"").trim()
+  );
+  if(missingGlyph.length){
+    throw mushafIntegrityError(
+      page,
+      `وجد ${missingGlyph.length} كلمة بلا code_v2.`
+    );
+  }
+
+  return true;
+}
+
 async function fetchPage(page){
   const url =
     `${API_BASE}/verses/by_page/${page}` +
     `?words=true` +
-    `&word_fields=code_v2,text_qpc_hafs,text_uthmani,line_number,page_number` +
+    `&mushaf=${MUSHAF_ID}` +
+    `&word_fields=code_v2,text_qpc_hafs,text_uthmani,location,v2_page,line_v2,line_number,page_number` +
     `&per_page=50`;
 
   const res = await fetch(url);
@@ -1214,21 +1301,39 @@ async function fetchPage(page){
   const json = await res.json();
   const verses = Array.isArray(json.verses) ? json.verses : [];
 
-  // نحتفظ فقط بعناصر السورة الحالية الموجودة فعلا في هذه الصفحة.
   const tokens = [];
+  const sourceWords = [];
 
   verses.forEach(verse => {
-    if(verse.chapter_id !== SURAH.number && !String(verse.verse_key || "").startsWith(`${SURAH.number}:`)){
+    if(
+      verse.chapter_id !== SURAH.number &&
+      !String(verse.verse_key || "").startsWith(`${SURAH.number}:`)
+    ){
       return;
     }
 
     (verse.words || []).forEach(word => {
-      // بعض واجهات by_page تعيد الآية كاملة ولو امتدت إلى صفحة أخرى.
-      if(Number(word.page_number) !== page) return;
+      sourceWords.push({word,verse});
+
+      /*
+        نربط glyph code_v2 بالصفحة/السطر الخاصين بـQCF V2.
+        v2_page/line_v2 لهما الأولوية، ثم page_number/line_number
+        كـfallback لأن الطلب نفسه مثبت على mushaf=1.
+      */
+      const v2Page=qcfV2PageOf(word);
+      if(v2Page!==Number(page)) return;
+
+      const line=qcfV2LineOf(word);
+      if(!(line>=1 && line<=MUSHAF_LINES_PER_PAGE)){
+        throw mushafIntegrityError(
+          page,
+          `العنصر ${word.location||word.verse_key||""} له سطر QCF V2 غير صالح: ${line}.`
+        );
+      }
 
       tokens.push({
         page,
-        line:Number(word.line_number),
+        line,
         verse:verseNumber(word,verse),
         position:Number(word.position || 0),
         location:String(word.location || ""),
@@ -1242,6 +1347,7 @@ async function fetchPage(page){
     });
   });
 
+  validatePageIntegrity(page,tokens,sourceWords);
   return {page,tokens};
 }
 
@@ -1406,15 +1512,19 @@ function renderPages(){
     linesBox.className="page-lines";
 
     const byLine = new Map();
-    for(let i=1;i<=15;i++) byLine.set(i,[]);
+    for(let i=1;i<=MUSHAF_LINES_PER_PAGE;i++) byLine.set(i,[]);
 
     p.tokens.forEach(t => {
-      if(t.line >=1 && t.line <=15){
-        byLine.get(t.line).push(t);
+      if(!(t.line>=1 && t.line<=MUSHAF_LINES_PER_PAGE)){
+        throw mushafIntegrityError(
+          p.page,
+          `محاولة رسم عنصر في سطر غير صالح: ${t.line}.`
+        );
       }
+      byLine.get(t.line).push(t);
     });
 
-    for(let lineNo=1; lineNo<=15; lineNo++){
+    for(let lineNo=1; lineNo<=MUSHAF_LINES_PER_PAGE; lineNo++){
       const line = document.createElement("div");
       line.className="mushaf-line";
       line.dataset.line=lineNo;
@@ -4343,12 +4453,23 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js",{sco
 loadAllPages().catch(err=>{
   console.error(err);
   document.getElementById("loading").style.display="none";
+
+  if(err?.code==="MUSHAF_INTEGRITY"){
+    document.getElementById("pages").innerHTML=
+      `<div class="error">
+        <b>تم إيقاف عرض الصفحة لحماية سلامة نص المصحف.</b><br>
+        اكتشف التطبيق تعارضا في تخطيط QCF V2، ولذلك لم يحاول عرض صفحة ناقصة أو إسقاط كلمات بصمت.<br><br>
+        ${escapeHtml(String(err.message || err))}
+      </div>`;
+    return;
+  }
+
   document.getElementById("pages").innerHTML=
     `<div class="error">
       <b>تعذر تحميل بيانات المصحف.</b><br>
-      يحتاج الملف إلى اتصال بالإنترنت عند أول تشغيل لتحميل بيانات الصفحات وخطوطها.
-      بعد ذلك يستفيد من ذاكرة المتصفح المؤقتة.<br><br>
-      ${String(err.message || err)}
+      يحتاج التطبيق إلى اتصال بالإنترنت عند أول تشغيل أو بعد تحديث بيانات تخطيط المصحف.
+      بعد تنزيل النسخة المصححة تعمل الصفحات من الذاكرة المؤقتة.<br><br>
+      ${escapeHtml(String(err.message || err))}
     </div>`;
 });
 </script>
